@@ -92,7 +92,7 @@ const MainPage: React.FC = () => {
         <p>
           You have been approved! Click{" "}
           <a
-            href="https://game-ai-assistant.vercel.app/"
+            href="https://video-game-wingman-57d61bef9e61.herokuapp.com/"
             target="_blank"
             rel="noopener noreferrer"
           >
