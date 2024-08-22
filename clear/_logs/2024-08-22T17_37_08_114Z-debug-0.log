@@ -1,0 +1,18 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Users\mgamb\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.8.2
+2 info using node@v20.12.1
+3 silly config load:file:C:\Users\mgamb\AppData\Roaming\npm\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\mgamb\DevAcc2024\2024-08\video-game-wingman-frontend\.npmrc
+5 silly config load:file:C:\Users\mgamb\.npmrc
+6 silly config load:file:C:\Users\mgamb\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm run build
+8 verbose argv "run" "build" "--cache" "clear"
+9 verbose logfile logs-max:10 dir:C:\Users\mgamb\DevAcc2024\2024-08\video-game-wingman-frontend\clear\_logs\2024-08-22T17_37_08_114Z-
+10 verbose logfile C:\Users\mgamb\DevAcc2024\2024-08\video-game-wingman-frontend\clear\_logs\2024-08-22T17_37_08_114Z-debug-0.log
+11 silly logfile done cleaning log files
+12 verbose cwd C:\Users\mgamb\DevAcc2024\2024-08\video-game-wingman-frontend
+13 verbose os Windows_NT 10.0.22631
+14 verbose node v20.12.1
+15 verbose npm  v10.8.2
+16 verbose exit 0
+17 info ok
