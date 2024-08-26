@@ -7,10 +7,10 @@
 6 silly config load:file:C:\Users\mgamb\AppData\Roaming\npm\etc\npmrc
 7 verbose title npm run build
 8 verbose argv "run" "build" "--cache" "clear"
-9 verbose logfile logs-max:10 dir:C:\Users\mgamb\DevAcc2024\2024-08\video-game-wingman-frontend\clear\_logs\2024-08-22T16_34_26_958Z-
-10 verbose logfile C:\Users\mgamb\DevAcc2024\2024-08\video-game-wingman-frontend\clear\_logs\2024-08-22T16_34_26_958Z-debug-0.log
-11 silly logfile done cleaning log files
-12 http fetch GET 200 https://registry.npmjs.org/npm 421ms
+9 verbose logfile logs-max:10 dir:C:\Users\mgamb\DevAcc2024\2024-08\video-game-wingman-frontend\clear\_logs\2024-08-26T17_08_40_189Z-
+10 verbose logfile C:\Users\mgamb\DevAcc2024\2024-08\video-game-wingman-frontend\clear\_logs\2024-08-26T17_08_40_189Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly logfile done cleaning log files
 13 verbose cwd C:\Users\mgamb\DevAcc2024\2024-08\video-game-wingman-frontend
 14 verbose os Windows_NT 10.0.22631
 15 verbose node v20.12.1

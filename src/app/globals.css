@@ -6,10 +6,10 @@ body {
   color: #ffffff;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
-  padding: 20px;
-  overflow-y: auto;
+  align-items: center;
+  height: 100vh;
+  text-align: center;
+  overflow: hidden;
 }
 
 /* Loading Spinner */
@@ -20,16 +20,7 @@ body {
   width: 60px;
   height: 60px;
   animation: spin 2s linear infinite;
-  margin: 20px auto; /* Center the spinner and add margin */
-  display: block; /* Ensure it takes up space as a block element */
-}
-
-/* Spinner Wrapper to ensure proper spacing */
-.spinner-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px; /* Space above the spinner */
+  margin: 20px auto;
 }
 
 @keyframes spin {
@@ -42,258 +33,74 @@ body {
 }
 
 /* Container */
-.container {
-  text-align: center;
+.home-container {
   max-width: 800px;
   padding: 20px;
-  border-radius: 20px;
-  background: #0f3460;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-  margin-top: 20px;
-}
-
-/* Hero Section */
-.hero {
-  background: linear-gradient(135deg, #e94560 0%, #0f3460 100%);
-  padding: 40px 20px;
   text-align: center;
-  color: #ffffff;
-  border-radius: 20px;
-  margin-bottom: 40px;
 }
 
-.hero img {
-  width: 150px;
-  margin-bottom: 20px;
+/* Headings */
+h1 {
+  font-size: 1.4rem; /* Reduced font size further to ensure it fits on one line */
+  margin: 18px 0;
+  white-space: normal; /* Allow text to wrap normally */
+  overflow: visible; /* Ensure text doesn't get hidden */
 }
 
-.hero h1 {
-  font-size: 2.5em;
-  margin: 0 0 10px 0;
-  color: #ffffff;
-}
-
-.hero p {
-  font-size: 1.1em;
-  color: #dddddd;
-  margin-bottom: 0;
-}
-
-/* Section Headers */
-h2 {
-  font-size: 1.8em;
-  margin-top: 40px;
-  margin-bottom: 10px;
-  color: #ffffff;
-}
-
-.description {
-  font-size: 1.2em;
-  margin-bottom: 20px;
-  color: #cccccc;
-}
-
-.features-list {
-  text-align: left;
-  font-size: 1.1em;
-  color: #a7a9be;
-  list-style-type: disc;
-  padding-left: 20px;
-}
-
-.features-list li {
-  margin-bottom: 10px;
-}
-
-/* Call to Action */
-.call-to-action {
-  font-size: 1.2em;
-  color: #e94560;
-  margin-top: 20px;
-}
-
-/* Join Waitlist Button */
-.join-waitlist-button {
-  margin-top: 20px;
-  margin-right: 20px; /* Add this line to create space between the buttons */
-  padding: 15px 30px;
-  font-size: 1em;
-  color: #ffffff;
-  background-color: #e94560;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.join-waitlist-button:hover {
-  background-color: #d63050;
-}
-
-/* Auth Forms */
-.auth-container {
-  text-align: center;
-  margin-top: 40px;
-}
-
-.auth-logo,
-.main-container img,
-.logo {
-  width: 100%; /* Make the logo responsive */
-  max-width: 400px; /* Set a max width based on your preference */
-  height: auto; /* Maintain the aspect ratio */
-  display: block;
-  margin: 0 auto; /* Center horizontally */
-}
-
+/* Forms */
 .auth-form {
-  display: inline-block;
-  max-width: 300px;
-  text-align: left;
+  margin-top: 20px;
 }
 
 .auth-form input {
-  width: 100%;
-  padding: 15px;
+  width: 80%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 5px;
   font-size: 1rem;
-  border: 2px solid #ccc;
-  border-radius: 10px;
-  box-sizing: border-box;
-  margin-bottom: 10px; /* Add space between the input fields */
 }
 
 .auth-form button {
-  width: 100%;
-  padding: 15px;
+  padding: 10px 20px;
   font-size: 1rem;
   color: #ffffff;
   background-color: #e94560;
   border: none;
-  border-radius: 10px;
+  border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  margin-left: 10px;
 }
 
 .auth-form button:hover {
   background-color: #d63050;
 }
 
-/* Forgot Password Page */
-.forgot-password-container {
-  text-align: center;
-  margin-top: 40px;
-}
-
-.forgot-password-container h1 {
-  font-size: 2.5em;
-  margin-bottom: 20px;
-}
-
-.forgot-password-form {
-  display: inline-block;
-  max-width: 300px;
-  text-align: left;
-}
-
-.forgot-password-form input {
-  width: 100%;
-  padding: 15px;
-  font-size: 1rem;
-  border: 2px solid #ccc;
-  border-radius: 10px;
-  box-sizing: border-box;
-  margin-bottom: 10px;
-}
-
-.forgot-password-form button {
-  width: 100%;
-  padding: 15px;
-  font-size: 1rem;
-  color: #ffffff;
-  background-color: #e94560;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.forgot-password-form button:hover {
-  background-color: #d63050;
-}
-
-/* Main Container */
-.main-container {
-  text-align: center;
-  margin-top: 40px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh; /* Ensure the content is vertically centered */
-}
-
-.main-container button {
-  padding: 10px 20px;
-  font-size: 1rem;
-  color: #ffffff;
-  background-color: #e94560;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  margin-top: 20px;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Forgot Password Link */
-.forgot-password-link {
-  display: block;
-  margin-top: 10px;
-  text-align: center;
-  color: #ffffff;
-  text-decoration: underline;
-  cursor: pointer;
-  transition: color 0.3s ease;
-}
-
-.forgot-password-link:hover {
-  color: #e94560;
-}
-
-/* Splash Page Container Adjustment */
-.home-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh; /* Center vertically within the viewport */
+/* Text */
+.quote {
+  font-size: 1.1rem;
+  margin-top: 16px;
+  color: #a7a9be;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .hero img {
-    width: 120px;
+  h1 {
+    font-size: 1.1rem; /* Further reduced font size for smaller screens */
   }
 
-  .auth-logo,
-  .main-container img {
-    width: 150px;
-  }
-
-  .auth-form,
-  .forgot-password-form {
+  .auth-form input {
     width: 100%;
-    padding: 0 20px;
   }
+}
 
-  .join-waitlist-button,
-  .auth-form button,
-  .forgot-password-form button,
-  .main-container button {
-    width: 100%;
-    margin-right: 0;
-    margin-bottom: 10px;
-  }
+a {
+  color: #e94560;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+a:hover {
+  text-decoration: underline;
 }
