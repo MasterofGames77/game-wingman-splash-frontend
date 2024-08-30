@@ -8,6 +8,7 @@ import "./globals.css";
 interface SignUpResponse {
   message: string;
   link?: string; // Link is optional, only provided if the user is approved
+  position?: number; // Track user's position
 }
 
 const SplashPage: React.FC = () => {
@@ -15,6 +16,7 @@ const SplashPage: React.FC = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [link, setLink] = useState<string | null>(null); // State for storing the link
+  const [position, setPosition] = useState<number | null>(null); // State for storing position
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +37,11 @@ const SplashPage: React.FC = () => {
       if (response.data.link) {
         setLink(response.data.link);
       }
+
+      // Store the user's waitlist position
+      if (response.data.position !== undefined) {
+        setPosition(response.data.position);
+      }
     } catch (error) {
       console.error("Error adding email to waitlist:", error);
       setMessage("An error occurred. Please try again.");
@@ -52,9 +59,7 @@ const SplashPage: React.FC = () => {
         height={400}
         style={{ maxWidth: "100%", height: "auto" }}
       />
-      <h1>
-        Elevate Your Gameplay with Strategic Insights and Personalized Analytics
-      </h1>
+      <h1>Taking Video Game Play to Even Greater Heights!</h1>
       <form onSubmit={handleSignUp} className="auth-form">
         <input
           type="email"
@@ -67,9 +72,18 @@ const SplashPage: React.FC = () => {
           {loading ? <div className="loading-spinner"></div> : "Submit"}
         </button>
       </form>
+      <ul className="bullet-points">
+        <li>
+          Incredible Game Guides (Simply upload an image of where you need help)
+        </li>
+        <li>Amazing Game Recommendations</li>
+        <li>Discover Hidden Secrets</li>
+        <li>Outstanding Video Game Tips and Tricks</li>
+      </ul>
+      <p className="quote">Master any game and beat out the competition!</p>
       <p className="quote">
-        Don&apos;t miss out on your unfair advantage. Sign up now and get ahead
-        of the competition!
+        First 50,000 to sign up before December 1st receive 1 year of Wingman
+        Pro for free!
       </p>
       {message && <p>{message}</p>}
       {link && (
@@ -81,6 +95,7 @@ const SplashPage: React.FC = () => {
           .
         </p>
       )}
+      {position !== null && <p>You are {position}th on the waitlist.</p>}
     </div>
   );
 };

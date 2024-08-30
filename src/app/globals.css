@@ -41,10 +41,8 @@ body {
 
 /* Headings */
 h1 {
-  font-size: 1.4rem; /* Reduced font size further to ensure it fits on one line */
+  font-size: 1.5rem;
   margin: 18px 0;
-  white-space: normal; /* Allow text to wrap normally */
-  overflow: visible; /* Ensure text doesn't get hidden */
 }
 
 /* Forms */
@@ -70,11 +68,25 @@ h1 {
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s ease;
-  margin-left: 10px;
+  margin-left: 10px; /* Add space between input and button */
 }
 
 .auth-form button:hover {
   background-color: #d63050;
+}
+
+/* Bullet Points */
+.bullet-points {
+  list-style-type: disc;
+  text-align: left;
+  margin: 20px auto;
+  padding: 0;
+  max-width: 600px;
+}
+
+.bullet-points li {
+  font-size: 1rem;
+  margin-bottom: 10px;
 }
 
 /* Text */
@@ -87,11 +99,16 @@ h1 {
 /* Responsive Design */
 @media (max-width: 768px) {
   h1 {
-    font-size: 1.1rem; /* Further reduced font size for smaller screens */
+    font-size: 1.25rem;
   }
 
   .auth-form input {
     width: 100%;
+  }
+
+  .bullet-points {
+    max-width: 100%;
+    padding: 0 20px;
   }
 }
 
