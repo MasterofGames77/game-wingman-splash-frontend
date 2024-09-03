@@ -9,16 +9,18 @@ body {
   align-items: center;
   height: 100vh;
   text-align: center;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden; /* Prevent scrolling */
+  padding: 10px; /* Add padding to avoid content touching screen edges */
 }
 
 /* Loading Spinner */
 .loading-spinner {
-  border: 8px solid #f3f3f3;
-  border-top: 8px solid #e94560;
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #e94560;
   border-radius: 50%;
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   animation: spin 2s linear infinite;
   margin: 20px auto;
 }
@@ -34,24 +36,40 @@ body {
 
 /* Container */
 .home-container {
-  max-width: 800px;
-  padding: 20px;
+  max-width: 700px; /* Adjusted max width to reduce space usage */
+  padding: 10px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.home-container img {
+  max-width: 60%; /* Reduce the logo size slightly */
+  height: auto;
+  margin-bottom: 15px; /* Adjust margin to reduce space usage */
 }
 
 /* Headings */
 h1 {
-  font-size: 1.5rem;
-  margin: 18px 0;
+  font-size: 1.25rem; /* Reduced the font size */
+  margin: 12px 0; /* Adjusted margin to reduce space usage */
 }
 
 /* Forms */
 .auth-form {
-  margin-top: 20px;
+  margin-top: 10px; /* Reduced margin */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
+/* Forms */
 .auth-form input {
-  width: 80%;
+  width: 90%;
   padding: 10px;
   margin-bottom: 10px;
   border: none;
@@ -60,7 +78,7 @@ h1 {
 }
 
 .auth-form button {
-  padding: 10px 20px;
+  padding: 10px 20px; /* Ensure the button maintains its spacing */
   font-size: 1rem;
   color: #ffffff;
   background-color: #e94560;
@@ -79,27 +97,27 @@ h1 {
 .bullet-points {
   list-style-type: disc;
   text-align: left;
-  margin: 20px auto;
+  margin: 10px auto;
   padding: 0;
   max-width: 600px;
 }
 
 .bullet-points li {
-  font-size: 1rem;
-  margin-bottom: 10px;
+  font-size: 0.9rem; /* Reduced font size */
+  margin-bottom: 8px; /* Reduced margin */
 }
 
 /* Text */
 .quote {
-  font-size: 1.1rem;
-  margin-top: 16px;
+  font-size: 0.9rem; /* Reduced font size */
+  margin-top: 10px; /* Reduced margin */
   color: #a7a9be;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
   h1 {
-    font-size: 1.25rem;
+    font-size: 1rem;
   }
 
   .auth-form input {
@@ -109,6 +127,29 @@ h1 {
   .bullet-points {
     max-width: 100%;
     padding: 0 20px;
+  }
+
+  .home-container {
+    padding: 10px;
+  }
+
+  h1 {
+    font-size: 1.1rem;
+  }
+
+  .quote {
+    font-size: 0.9rem;
+    padding: 0 10px;
+  }
+
+  /* Ensure the content fits within the viewport on smaller screens */
+  body {
+    padding: 10px;
+  }
+
+  .home-container {
+    height: auto;
+    max-height: 100%;
   }
 }
 
