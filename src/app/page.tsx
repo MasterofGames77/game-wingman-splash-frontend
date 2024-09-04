@@ -82,7 +82,7 @@ const SplashPage: React.FC = () => {
       </ul>
       <p className="quote">Master any game and beat out the competition!</p>
       <p className="quote">
-        First 50,000 to sign up before December 1st receive 1 year of Wingman
+        First 1,000 to sign up before December 31st receive 1 year of Wingman
         Pro for free!
       </p>
       {message && <p>{message}</p>}
