@@ -48,9 +48,9 @@ body {
 }
 
 .home-container img {
-  max-width: 60%; /* Reduce the logo size slightly */
+  max-width: 55%; /* Further reduced the logo size */
   height: auto;
-  margin-bottom: 15px; /* Adjust margin to reduce space usage */
+  margin-bottom: 10px; /* Adjust margin to reduce space usage */
 }
 
 /* Headings */
@@ -117,7 +117,7 @@ h1 {
 /* Responsive Design */
 @media (max-width: 768px) {
   h1 {
-    font-size: 1rem;
+    font-size: 1.1rem;
   }
 
   .auth-form input {
@@ -131,6 +131,10 @@ h1 {
 
   .home-container {
     padding: 10px;
+  }
+
+  .home-container img {
+    max-width: 45%; /* Further reduce the logo size for small screens */
   }
 
   h1 {
