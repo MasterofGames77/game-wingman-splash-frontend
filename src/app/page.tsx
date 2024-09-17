@@ -81,10 +81,10 @@ const SplashPage: React.FC = () => {
         <li>Discover Hidden Secrets</li>
         <li>Outstanding Video Game Tips and Tricks</li>
       </ul>
-      <p className="quote">Free Users Get 50 Questions Per Week!</p>
+      {/* <p className="quote">Free Users Get 50 Questions Per Week!</p> */}
       <p className="quote">
-        First 5,000 to sign up before December 31st receive 1 year of Wingman
-        Pro for free!
+        First 5,000 Users to sign up before December 31st receive 1 year of
+        Wingman Pro for free!
       </p>
       {message && <p>{message}</p>}
       {link && (
