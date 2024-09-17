@@ -59,7 +59,7 @@ const SplashPage: React.FC = () => {
         height={400}
         style={{ maxWidth: "100%", height: "auto" }}
       />
-      <h1>Taking Video Game Play to Even Greater Heights!</h1>
+      <h1>Taking Video Game Play To It&#39;s Greatest Heights!</h1>
       <form onSubmit={handleSignUp} className="auth-form">
         <input
           type="email"
@@ -74,15 +74,16 @@ const SplashPage: React.FC = () => {
       </form>
       <ul className="bullet-points">
         <li>
-          Incredible Game Guides (Simply upload an image of where you need help)
+          Incredible Video Game Guides (Simply upload an image of where you need
+          help)
         </li>
-        <li>Amazing Game Recommendations</li>
+        <li>Amazing Video Game Recommendations</li>
         <li>Discover Hidden Secrets</li>
         <li>Outstanding Video Game Tips and Tricks</li>
       </ul>
-      <p className="quote">Master any game and beat out the competition!</p>
+      <p className="quote">Free Users Get 50 Questions Per Week!</p>
       <p className="quote">
-        First 1,000 to sign up before December 31st receive 1 year of Wingman
+        First 5,000 to sign up before December 31st receive 1 year of Wingman
         Pro for free!
       </p>
       {message && <p>{message}</p>}

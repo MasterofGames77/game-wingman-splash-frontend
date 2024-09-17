@@ -61,24 +61,25 @@ h1 {
 
 /* Forms */
 .auth-form {
-  margin-top: 10px; /* Reduced margin */
+  margin-top: 10px;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
+  flex-direction: row; /* Change direction to row to align items horizontally */
+  gap: 10px; /* Add gap between the input and button */
 }
 
-/* Forms */
 .auth-form input {
-  width: 90%;
+  width: 70%; /* Adjust width to accommodate the button next to it */
   padding: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 0; /* Remove bottom margin since button is next to it */
   border: none;
   border-radius: 5px;
   font-size: 1rem;
 }
 
 .auth-form button {
-  padding: 10px 20px; /* Ensure the button maintains its spacing */
+  padding: 10px 20px;
   font-size: 1rem;
   color: #ffffff;
   background-color: #e94560;
@@ -86,7 +87,7 @@ h1 {
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s ease;
-  margin-left: 10px; /* Add space between input and button */
+  margin-left: 0; /* Remove left margin */
 }
 
 .auth-form button:hover {
@@ -116,8 +117,9 @@ h1 {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  h1 {
-    font-size: 1.1rem;
+  .auth-form {
+    flex-direction: column; /* Stack input and button vertically on small screens */
+    gap: 10px;
   }
 
   .auth-form input {
