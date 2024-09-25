@@ -84,7 +84,7 @@ const SplashPage: React.FC = () => {
       {/* <p className="quote">Free Users Get 50 Questions Per Week!</p> */}
       <p className="quote">
         First 5,000 Users to sign up before December 31st receive 1 year of
-        Wingman Pro for free (Unlimited Forum Creation)!
+        Unlimited Forum Creation!
       </p>
       {message && <p>{message}</p>}
       {link && (
