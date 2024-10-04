@@ -59,7 +59,7 @@ const SplashPage: React.FC = () => {
         height={400}
         style={{ maxWidth: "100%", height: "auto" }}
       />
-      <h1>Taking Video Game Play To It&#39;s Greatest Heights!</h1>
+      <h1>Taking Video Games To Their Greatest Heights!</h1>
       <form onSubmit={handleSignUp} className="auth-form">
         <input
           type="email"
