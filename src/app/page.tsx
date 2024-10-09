@@ -57,7 +57,7 @@ const SplashPage: React.FC = () => {
         alt="Video Game Wingman Logo"
         width={400}
         height={400}
-        style={{ maxWidth: "100%", height: "auto" }}
+        style={{ maxWidth: "100%", height: "auto", marginTop: "40px" }} // Increased top margin
       />
       <h1>Taking Video Games To Their Greatest Heights!</h1>
       <form onSubmit={handleSignUp} className="auth-form">
@@ -81,11 +81,19 @@ const SplashPage: React.FC = () => {
         <li>Discover Hidden Secrets</li>
         <li>Outstanding Video Game Tips and Tricks</li>
       </ul>
-      {/* <p className="quote">Free Users Get 50 Questions Per Week!</p> */}
       <p className="quote">
-        First 5,000 Users to sign up before December 31st receive 1 year of
-        Unlimited Forum Creation!
+        First 5,000 Users to sign up before December 31st get access to Wingman
+        Pro 1 year for free!
       </p>
+      {/* Center-align Wingman Pro Features section */}
+      <div className="pro-features-section">
+        <h4>Wingman Pro Features:</h4>
+        <ul className="bullet-points-2">
+          <li>Advanced Game Guides</li>
+          <li>Real-Time Notifications</li>
+          <li>Exclusive Access to Discord Bot</li>
+        </ul>
+      </div>
       {message && <p>{message}</p>}
       {link && (
         <p>
@@ -96,7 +104,7 @@ const SplashPage: React.FC = () => {
           .
         </p>
       )}
-      {position !== null && <p>You are {position}th on the waitlist.</p>}
+      {position !== null && <p>Your waitlist position: {position}</p>}
     </div>
   );
 };

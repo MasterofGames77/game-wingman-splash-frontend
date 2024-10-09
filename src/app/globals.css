@@ -7,11 +7,10 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
   text-align: center;
-  overflow-x: hidden;
-  overflow-y: hidden; /* Prevent scrolling */
-  padding: 10px; /* Add padding to avoid content touching screen edges */
+  overflow: hidden;
+  padding: 0;
 }
 
 /* Loading Spinner */
@@ -19,10 +18,10 @@ body {
   border: 6px solid #f3f3f3;
   border-top: 6px solid #e94560;
   border-radius: 50%;
-  width: 50px;
-  height: 50px;
+  width: 30px;
+  height: 30px;
   animation: spin 2s linear infinite;
-  margin: 20px auto;
+  margin: 10px auto;
 }
 
 @keyframes spin {
@@ -43,48 +42,49 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100%;
   box-sizing: border-box;
 }
 
+/* Logo */
 .home-container img {
-  max-width: 55%;
+  max-width: 50%;
   height: auto;
-  margin-bottom: 10px;
+  margin-top: 0;
+  margin-bottom: 5px;
 }
 
 /* Headings */
 h1 {
-  font-size: 1.25rem;
-  margin: 12px 0;
+  font-size: 1rem;
+  margin: 8px 0;
 }
 
 /* Forms */
 .auth-form {
-  margin-top: 10px;
+  margin-top: 5px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .auth-form input {
-  width: calc(100% - 130px);
-  padding: 10px;
+  width: calc(100% - 120px);
+  padding: 6px;
   border: none;
   border-radius: 5px;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .auth-form button {
-  padding: 10px 20px;
-  font-size: 1rem;
+  padding: 6px 15px;
+  font-size: 0.9rem;
   color: #ffffff;
   background-color: #e94560;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s ease;
-  margin-left: 10px;
+  margin-left: 5px;
 }
 
 .auth-form button:hover {
@@ -92,73 +92,58 @@ h1 {
 }
 
 /* Bullet Points */
-.bullet-points {
+.bullet-points,
+.bullet-points-2 {
   list-style-type: disc;
   text-align: left;
-  margin: 10px auto;
-  padding: 0;
+  margin: 4px auto;
+  padding-left: 20px; /* Adjusted for better bullet spacing */
   max-width: 600px;
 }
 
-.bullet-points li {
+.bullet-points li,
+.bullet-points-2 li {
   font-size: 0.9rem;
+  margin-bottom: 3px;
+  margin-left: 5px; /* Consistent spacing between bullet and text */
+  text-indent: -5px; /* Adjust to match desired spacing */
+}
+
+/* Quote and Feature Heading */
+.quote {
+  font-size: 0.9rem;
+  margin-top: 5px;
+  color: #a7a9be;
+  line-height: 1.2;
   margin-bottom: 8px;
 }
 
-/* Text */
-.quote,
+/* Pro Features Section */
+.pro-features-section {
+  text-align: center;
+  margin-top: 5px;
+}
+
+.pro-features-section h4 {
+  margin-bottom: 5px;
+  font-size: 1rem;
+}
+
+.pro-features-section .bullet-points-2 {
+  list-style-type: disc;
+  text-align: left;
+  padding-left: 20px;
+  max-width: 600px;
+}
+
+/* Additional Info */
 .additional-info {
   font-size: 0.9rem;
-  margin-top: 10px;
   color: #a7a9be;
-  line-height: 1.5; /* Adjust line height for better readability */
+  line-height: 1.2;
 }
 
-/* Ensure text fits without overlapping */
-.additional-info {
-  line-height: 1.5; /* Ensure enough space for descenders */
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  h1 {
-    font-size: 1.1rem;
-  }
-
-  .auth-form input {
-    width: 100%;
-  }
-
-  .bullet-points {
-    max-width: 100%;
-    padding: 0 20px;
-  }
-
-  .home-container {
-    padding: 10px;
-  }
-
-  .home-container img {
-    max-width: 45%;
-  }
-
-  h1 {
-    font-size: 1.1rem;
-  }
-
-  .quote,
-  .additional-info {
-    font-size: 0.9rem;
-    padding: 0 10px;
-    white-space: normal; /* Allow wrapping on smaller screens */
-  }
-
-  .home-container {
-    height: auto;
-    max-height: 100%;
-  }
-}
-
+/* Links */
 a {
   color: #e94560;
   text-decoration: none;
@@ -167,4 +152,36 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .home-container {
+    padding: 5px;
+  }
+
+  .home-container img {
+    max-width: 40%;
+  }
+
+  h1 {
+    font-size: 0.95rem;
+  }
+
+  .auth-form input {
+    width: 100%;
+  }
+
+  .bullet-points,
+  .bullet-points-2 {
+    max-width: 100%;
+    padding-left: 15px;
+  }
+
+  .quote,
+  .additional-info {
+    font-size: 0.9rem;
+    padding: 0 5px;
+    white-space: normal;
+  }
 }
