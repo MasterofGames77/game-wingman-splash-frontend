@@ -91,7 +91,7 @@ const SplashPage: React.FC = () => {
         <ul className="bullet-points-2">
           <li>Advanced Game Guides</li>
           <li>Real-Time Notifications</li>
-          <li>Exclusive Access to Discord Bot</li>
+          <li>Access to Exclusive Discord Bot</li>
         </ul>
       </div>
       {message && <p>{message}</p>}
