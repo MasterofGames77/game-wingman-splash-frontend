@@ -55,9 +55,10 @@ const SplashPage: React.FC = () => {
       <Image
         src="/video-game-wingman-logo.png"
         alt="Video Game Wingman Logo"
-        width={300}
-        height={300}
-        style={{ maxWidth: "100%", height: "auto", marginTop: "30px" }} // Increased top margin
+        width={250}
+        height={250}
+        priority // Adding priority for LCP optimization
+        style={{ maxWidth: "100%", height: "auto", marginTop: "10px" }}
       />
       <h1>Taking Video Games To Their Greatest Heights!</h1>
       <form onSubmit={handleSignUp} className="auth-form">
