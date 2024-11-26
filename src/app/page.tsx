@@ -98,7 +98,7 @@ const SplashPage: React.FC = () => {
       {message && <p>{message}</p>}
       {link && (
         <p>
-          You have been approved! Access the AI assistant{" "}
+          You have been approved! Access Video Game Wingman here{" "}
           <a href={link} target="_blank" rel="noopener noreferrer">
             here
           </a>
