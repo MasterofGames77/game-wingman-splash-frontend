@@ -5,7 +5,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'vgw-splash-page-frontend-71431835113b.herokuapp.com',
+        hostname: 'videogamewingman.com',
         pathname: '/**',
       },
     ],
