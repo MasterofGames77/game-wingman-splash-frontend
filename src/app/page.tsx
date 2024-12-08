@@ -60,7 +60,7 @@ const SplashPage: React.FC = () => {
         priority // Adding priority for LCP optimization
         style={{ maxWidth: "100%", height: "auto", marginTop: "10px" }}
       />
-      <h1>Taking Video Games To Their Greatest Heights!</h1>
+      <h1>Taking Video Games To Their Greatest Heights!&apos;</h1>
       <form onSubmit={handleSignUp} className="auth-form">
         <input
           type="email"
@@ -76,11 +76,21 @@ const SplashPage: React.FC = () => {
       <ul className="bullet-points">
         <li>
           Incredible Video Game Guides (Simply upload an image of where you need
-          help)
+          help) – perfect for gamers of all skill levels, from beginners to
+          experts!
         </li>
-        <li>Amazing Video Game Recommendations</li>
-        <li>Discover Hidden Secrets</li>
-        <li>Outstanding Video Game Tips and Tricks</li>
+        <li>
+          Amazing Video Game Recommendations – find the best games tailored to
+          your preferences or your child&#39;s age group.
+        </li>
+        <li>
+          Discover Hidden Secrets – encourage curiosity and problem-solving
+          through exploring hidden game features.
+        </li>
+        <li>
+          Outstanding Video Game Tips and Tricks – enhance gameplay while
+          promoting healthy gaming habits.
+        </li>
       </ul>
       <p className="quote">
         First 5,000 Users to sign up before December 31st get access to Wingman

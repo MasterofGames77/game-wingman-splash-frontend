@@ -9,8 +9,8 @@ body {
   align-items: center;
   min-height: 100vh;
   text-align: center;
-  overflow: hidden;
   padding: 0;
+  overflow: auto; /* Allow scrolling */
 }
 
 /* Loading Spinner */
@@ -55,7 +55,7 @@ body {
 
 /* Headings */
 h1 {
-  font-size: 1rem;
+  font-size: 0.9rem; /* Reduced size slightly */
   margin: 8px 0;
 }
 
@@ -69,16 +69,21 @@ h1 {
 }
 
 .auth-form input {
-  width: calc(100% - 120px);
-  padding: 6px;
+  width: calc(100% - 100px); /* Adjust width dynamically to fit the container */
+  max-width: 600px; /* Prevent input from becoming too wide */
+  padding: 8px; /* Add some padding for comfort */
   border: none;
   border-radius: 5px;
-  font-size: 0.9rem;
+  font-size: 0.9rem; /* Ensure readable font size */
+  box-sizing: border-box; /* Include padding in the width calculation */
+  overflow-x: auto; /* Allow horizontal scrolling for long text */
+  white-space: nowrap; /* Prevent text wrapping */
+  text-overflow: initial; /* Disable ellipsis truncation */
 }
 
 .auth-form button {
   padding: 6px 15px;
-  font-size: 0.9rem;
+  font-size: 0.8rem; /* Reduced size slightly */
   color: #ffffff;
   background-color: #e94560;
   border: none;
@@ -97,22 +102,22 @@ h1 {
 .bullet-points-2 {
   list-style-type: disc;
   text-align: left;
-  margin: 4px auto;
+  margin: 8px auto; /* Reduced margin slightly */
   padding-left: 20px;
   max-width: 600px;
+  line-height: 1.4; /* Adjusted line height */
 }
 
 .bullet-points li,
 .bullet-points-2 li {
-  font-size: 0.9rem;
-  margin-bottom: 3px;
-  margin-left: 5px;
-  text-indent: -5px;
+  font-size: 0.85rem; /* Reduced font size slightly */
+  margin-bottom: 6px; /* Reduced margin for tighter spacing */
+  text-indent: 0;
 }
 
 /* Quote and Feature Heading */
 .quote {
-  font-size: 0.9rem;
+  font-size: 0.85rem; /* Reduced size slightly */
   margin-top: 5px;
   color: #a7a9be;
   line-height: 1.2;
@@ -128,7 +133,7 @@ h1 {
 
 .pro-features-section h4 {
   margin-bottom: 5px;
-  font-size: 1rem;
+  font-size: 0.9rem; /* Reduced size slightly */
 }
 
 .pro-features-section .bullet-points-2 {
@@ -136,11 +141,13 @@ h1 {
   text-align: left;
   padding-left: 20px;
   max-width: 600px;
+  line-height: 1.4; /* Adjusted line height */
+  font-size: 0.85rem; /* Reduced size slightly */
 }
 
 /* Additional Info */
 .additional-info {
-  font-size: 0.9rem;
+  font-size: 0.85rem; /* Reduced size slightly */
   color: #a7a9be;
   line-height: 1.2;
 }
@@ -150,6 +157,7 @@ a {
   color: #e94560;
   text-decoration: none;
   font-weight: bold;
+  font-size: 0.85rem; /* Reduced size slightly */
 }
 
 a:hover {
@@ -167,7 +175,7 @@ a:hover {
   }
 
   h1 {
-    font-size: 0.95rem;
+    font-size: 0.85rem; /* Reduced size slightly */
   }
 
   .auth-form input {
@@ -176,14 +184,21 @@ a:hover {
 
   .bullet-points,
   .bullet-points-2 {
-    max-width: 100%;
     padding-left: 15px;
+    line-height: 1.3; /* Adjusted line height for tighter spacing */
   }
 
-  .quote,
-  .additional-info {
-    font-size: 0.9rem;
-    padding: 0 5px;
-    white-space: normal;
+  .bullet-points li,
+  .bullet-points-2 li {
+    font-size: 0.8rem; /* Reduced size slightly for mobile */
+    margin-bottom: 5px; /* Adjusted spacing */
+  }
+
+  .pro-features-section h4 {
+    font-size: 0.85rem; /* Adjusted size for mobile */
+  }
+
+  .pro-features-section .bullet-points-2 {
+    font-size: 0.8rem; /* Reduced size for mobile */
   }
 }
