@@ -81,7 +81,7 @@ const SplashPage: React.FC = () => {
         </li>
         <li>
           Amazing Video Game Recommendations – find the best games tailored to
-          your preferences or your child&#39;s age group.
+          your preferences.
         </li>
         <li>
           Discover Hidden Secrets – encourage curiosity and problem-solving
