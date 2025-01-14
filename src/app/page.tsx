@@ -93,7 +93,7 @@ const SplashPage: React.FC = () => {
         </li>
       </ul>
       <p className="quote">
-        First 5,000 Users to sign up before January 31st, 2025 get access to
+        First 5,000 Users to sign up before July 31st, 2025 get access to
         Wingman Pro 1 year for free!
       </p>
       {/* Center-align Wingman Pro Features section */}
