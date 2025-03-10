@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import axios from "axios";
 import Image from "next/image";
 import "./globals.css";
@@ -11,44 +11,73 @@ interface SignUpResponse {
   position?: number; // Track user's position
 }
 
+interface FormState {
+  email: string;
+  message: string;
+  loading: boolean;
+  link: string | null;
+  position: number | null;
+}
+
+const initialFormState: FormState = {
+  email: "",
+  message: "",
+  loading: false,
+  link: null,
+  position: null,
+};
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 const SplashPage: React.FC = () => {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [link, setLink] = useState<string | null>(null); // State for storing the link
-  const [position, setPosition] = useState<number | null>(null); // State for storing position
+  const [formState, setFormState] = useState<FormState>(initialFormState);
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFormState((prev) => ({ ...prev, email: e.target.value }));
+    },
+    []
+  );
 
-    try {
-      const API_BASE_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  const handleSignUp = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
 
-      const response = await axios.post<SignUpResponse>(
-        `${API_BASE_URL}/api/auth/signup`,
-        { email }
-      );
+      setFormState((prev) => ({ ...prev, loading: true, message: "" }));
 
-      setMessage(response.data.message);
+      try {
+        const response = await axios.post<SignUpResponse>(
+          `${API_BASE_URL}/api/auth/signup`,
+          { email: formState.email }
+        );
 
-      // If the user is approved, store the link in the state
-      if (response.data.link) {
-        setLink(response.data.link);
+        setFormState((prev) => ({
+          ...prev,
+          message: response.data.message,
+          link: response.data.link || null,
+          position: response.data.position ?? null,
+          loading: false,
+        }));
+      } catch (error) {
+        console.error("Error adding email to waitlist:", error);
+        setFormState((prev) => ({
+          ...prev,
+          message: "An error occurred. Please try again.",
+          loading: false,
+        }));
       }
+    },
+    [formState.email]
+  );
 
-      // Store the user's waitlist position
-      if (response.data.position !== undefined) {
-        setPosition(response.data.position);
-      }
-    } catch (error) {
-      console.error("Error adding email to waitlist:", error);
-      setMessage("An error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const proFeatures = useMemo(
+    () => [
+      "Advanced Game Guides",
+      "Real-Time Notifications",
+      "Access to Exclusive Forums: Discuss games, and explore a variety of topics",
+    ],
+    []
+  );
 
   return (
     <div className="home-container">
@@ -64,13 +93,17 @@ const SplashPage: React.FC = () => {
       <form onSubmit={handleSignUp} className="auth-form">
         <input
           type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={formState.email}
+          onChange={handleEmailChange}
           placeholder="Enter your email"
           required
         />
-        <button type="submit" disabled={loading}>
-          {loading ? <div className="loading-spinner"></div> : "Submit"}
+        <button type="submit" disabled={formState.loading}>
+          {formState.loading ? (
+            <div className="loading-spinner"></div>
+          ) : (
+            "Submit"
+          )}
         </button>
       </form>
       <ul className="bullet-points">
@@ -100,25 +133,24 @@ const SplashPage: React.FC = () => {
       <div className="pro-features-section">
         <h4>Wingman Pro Features:</h4>
         <ul className="bullet-points-2">
-          <li>Advanced Game Guides</li>
-          <li>Real-Time Notifications</li>
-          <li>
-            Access to Exclusive Forums: Discuss games, and explore a variety of
-            topics
-          </li>
+          {proFeatures.map((feature, index) => (
+            <li key={index}>{feature}</li>
+          ))}
         </ul>
       </div>
-      {message && <p>{message}</p>}
-      {link && (
+      {formState.message && <p>{formState.message}</p>}
+      {formState.link && (
         <p>
           You have been approved! Access Video Game Wingman{" "}
-          <a href={link} target="_blank" rel="noopener noreferrer">
+          <a href={formState.link} target="_blank" rel="noopener noreferrer">
             here
           </a>
           .
         </p>
       )}
-      {position !== null && <p>Your waitlist position: {position}</p>}
+      {formState.position !== null && (
+        <p>Your waitlist position: {formState.position}</p>
+      )}
     </div>
   );
 };
