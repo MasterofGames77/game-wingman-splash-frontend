@@ -4,20 +4,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import axios from "axios";
 import Image from "next/image";
 import "./globals.css";
-
-interface SignUpResponse {
-  message: string;
-  link?: string; // Link is optional, only provided if the user is approved
-  position?: number; // Track user's position
-}
-
-interface FormState {
-  email: string;
-  message: string;
-  loading: boolean;
-  link: string | null;
-  position: number | null;
-}
+import { FormState, SignUpResponse } from "../../types";
 
 const initialFormState: FormState = {
   email: "",
@@ -25,6 +12,7 @@ const initialFormState: FormState = {
   loading: false,
   link: null,
   position: null,
+  userId: null,
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -56,6 +44,7 @@ const SplashPage: React.FC = () => {
           message: response.data.message,
           link: response.data.link || null,
           position: response.data.position ?? null,
+          userId: response.data.userId || null,
           loading: false,
         }));
       } catch (error) {
@@ -142,7 +131,17 @@ const SplashPage: React.FC = () => {
       {formState.link && (
         <p>
           You have been approved! Access Video Game Wingman{" "}
-          <a href={formState.link} target="_blank" rel="noopener noreferrer">
+          <a
+            href={`${formState.link}${
+              formState.userId
+                ? `?earlyAccess=true&userId=${encodeURIComponent(
+                    formState.userId
+                  )}`
+                : ""
+            }`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             here
           </a>
           .

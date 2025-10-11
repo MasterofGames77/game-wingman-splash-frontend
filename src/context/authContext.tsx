@@ -9,13 +9,7 @@ import {
   useEffect,
   useMemo,
 } from "react";
-
-interface AuthContextType {
-  token: string | null;
-  isAuthenticated: boolean;
-  setAuth: (token: string | null) => void;
-  clearAuth: () => void;
-}
+import { AuthContextType } from "../../types";
 
 const AUTH_TOKEN_KEY = "auth_token";
 
