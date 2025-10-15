@@ -97,9 +97,8 @@ const SplashPage: React.FC = () => {
       </form>
       <ul className="bullet-points">
         <li>
-          Incredible Video Game Guides (Simply upload an image of where you need
-          help) – perfect for gamers of all skill levels, from beginners to
-          experts!
+          Incredible Video Game Guides – perfect for gamers of all skill levels,
+          from beginners to experts!
         </li>
         <li>
           Amazing Video Game Recommendations – find the best games tailored to
