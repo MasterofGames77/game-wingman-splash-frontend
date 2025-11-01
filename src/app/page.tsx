@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback } from "react";
 import axios from "axios";
 import Image from "next/image";
 import "./globals.css";
@@ -59,15 +59,6 @@ const SplashPage: React.FC = () => {
     [formState.email]
   );
 
-  const proFeatures = useMemo(
-    () => [
-      "Advanced Game Guides",
-      "Real-Time Notifications",
-      "Access to Exclusive Forums: Discuss games, and explore a variety of topics",
-    ],
-    []
-  );
-
   return (
     <div className="home-container">
       <Image
@@ -76,54 +67,72 @@ const SplashPage: React.FC = () => {
         width={250}
         height={250}
         priority // Adding priority for LCP optimization
-        style={{ maxWidth: "100%", height: "auto", marginTop: "10px" }}
+        style={{ maxWidth: "100%", height: "auto", marginTop: "4px" }}
       />
-      <h1>Taking Video Games To Their Greatest Heights!&apos;</h1>
+      <h1>Your AI Co-Pilot for Every Game You Play.</h1>
+      <p className="subline">
+        Master any game. Discover hidden secrets. Level up faster — with your
+        ultimate Video Game Wingman.
+      </p>
       <form onSubmit={handleSignUp} className="auth-form">
         <input
           type="email"
           value={formState.email}
           onChange={handleEmailChange}
-          placeholder="Enter your email"
+          placeholder="you@example.com"
           required
         />
         <button type="submit" disabled={formState.loading}>
           {formState.loading ? (
             <div className="loading-spinner"></div>
           ) : (
-            "Submit"
+            "Get Early Access"
           )}
         </button>
       </form>
-      <ul className="bullet-points">
-        <li>
-          Incredible Video Game Guides – perfect for gamers of all skill levels,
-          from beginners to experts!
-        </li>
-        <li>
-          Amazing Video Game Recommendations – find the best games tailored to
-          your preferences.
-        </li>
-        <li>
-          Discover Hidden Secrets – encourage curiosity and problem-solving
-          through exploring hidden game features.
-        </li>
-        <li>
-          Outstanding Video Game Tips and Tricks – enhance gameplay while
-          promoting healthy gaming habits.
-        </li>
-      </ul>
-      <p className="quote">
-        First 5,000 Users to sign up before December 31st, 2025 get access to
-        Wingman Pro 1 year for free!
+      <p className="early-access-note">
+        The first 5,000 gamers to join get Wingman Pro free for 1 year.
       </p>
-      {/* Center-align Wingman Pro Features section */}
+      <div className="why-wingman-section">
+        <h2>Why Gamers Love Wingman</h2>
+        <p className="section-subline">Your Wingman gives you an edge:</p>
+        <ul className="bullet-points">
+          <li>
+            <strong>Real-Time Game Intelligence</strong> — get instant guides,
+            counters, and pro-level insights while you play.
+          </li>
+          <li>
+            <strong>Smarter Recommendations</strong> — find your next favorite
+            game based on your skill and style.
+          </li>
+          <li>
+            <strong>Hidden Secrets & Easter Eggs</strong> — explore every corner
+            of the worlds you love.
+          </li>
+          <li>
+            <strong>Instant Tips & Tricks</strong> — dominate every level
+            without breaking immersion.
+          </li>
+        </ul>
+      </div>
+      {/* Wingman Pro Features section */}
       <div className="pro-features-section">
-        <h4>Wingman Pro Features:</h4>
+        <h2>Wingman Pro</h2>
+        <p className="section-subline">
+          Upgrade to Pro — Free for Early Users:
+        </p>
         <ul className="bullet-points-2">
-          {proFeatures.map((feature, index) => (
-            <li key={index}>{feature}</li>
-          ))}
+          <li>
+            <strong>Deeper, dynamic AI game guides</strong>
+          </li>
+          <li>
+            <strong>Live in-game notifications and strategies</strong>
+          </li>
+          <li>
+            <strong>
+              Access to exclusive gamer forums and private Discord communities
+            </strong>
+          </li>
         </ul>
       </div>
       {formState.message && <p>{formState.message}</p>}
