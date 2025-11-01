@@ -67,12 +67,12 @@ const SplashPage: React.FC = () => {
         width={250}
         height={250}
         priority // Adding priority for LCP optimization
-        style={{ maxWidth: "100%", height: "auto", marginTop: "4px" }}
+        style={{ maxWidth: "100%", height: "auto" }}
       />
-      <h1>Your AI Co-Pilot for Every Game You Play.</h1>
+      <h1>Stop getting stuck. Start mastering every game instantly.</h1>
       <p className="subline">
-        Master any game. Discover hidden secrets. Level up faster — with your
-        ultimate Video Game Wingman.
+        Your AI Co-Pilot delivers real-time tips, secrets, and pro-level
+        insights while you play.
       </p>
       <form onSubmit={handleSignUp} className="auth-form">
         <input
@@ -91,50 +91,8 @@ const SplashPage: React.FC = () => {
         </button>
       </form>
       <p className="early-access-note">
-        The first 5,000 gamers to join get Wingman Pro free for 1 year.
+        The first 5,000 gamers get Wingman Pro free for 1 year.
       </p>
-      <div className="why-wingman-section">
-        <h2>Why Gamers Love Wingman</h2>
-        <p className="section-subline">Your Wingman gives you an edge:</p>
-        <ul className="bullet-points">
-          <li>
-            <strong>Real-Time Game Intelligence</strong> — get instant guides,
-            counters, and pro-level insights while you play.
-          </li>
-          <li>
-            <strong>Smarter Recommendations</strong> — find your next favorite
-            game based on your skill and style.
-          </li>
-          <li>
-            <strong>Hidden Secrets & Easter Eggs</strong> — explore every corner
-            of the worlds you love.
-          </li>
-          <li>
-            <strong>Instant Tips & Tricks</strong> — dominate every level
-            without breaking immersion.
-          </li>
-        </ul>
-      </div>
-      {/* Wingman Pro Features section */}
-      <div className="pro-features-section">
-        <h2>Wingman Pro</h2>
-        <p className="section-subline">
-          Upgrade to Pro — Free for Early Users:
-        </p>
-        <ul className="bullet-points-2">
-          <li>
-            <strong>Deeper, dynamic AI game guides</strong>
-          </li>
-          <li>
-            <strong>Live in-game notifications and strategies</strong>
-          </li>
-          <li>
-            <strong>
-              Access to exclusive gamer forums and private Discord communities
-            </strong>
-          </li>
-        </ul>
-      </div>
       {formState.message && <p>{formState.message}</p>}
       {formState.link && (
         <p>
