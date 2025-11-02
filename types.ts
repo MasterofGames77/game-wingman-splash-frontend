@@ -20,3 +20,27 @@ export interface AuthContextType {
     setAuth: (token: string | null) => void;
     clearAuth: () => void;
 }
+
+// Forum Preview Types
+export interface ForumPost {
+    author: string;
+    content: string;
+    timestamp: string;
+    likes: number;
+}
+
+export interface ForumPreviewData {
+    forumId: string;
+    title: string;
+    gameTitle: string | null;
+    category: string | null;
+    totalPosts: number;
+}
+
+export interface ForumPostsResponse {
+    success: boolean;
+    forum: ForumPreviewData;
+    posts: ForumPost[];
+    count: number;
+    hasMore: boolean;
+}

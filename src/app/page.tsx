@@ -5,6 +5,7 @@ import axios from "axios";
 import Image from "next/image";
 import "./globals.css";
 import { FormState, SignUpResponse } from "../../types";
+import ForumPreview from "../components/ForumPreview";
 
 const initialFormState: FormState = {
   email: "",
@@ -116,6 +117,8 @@ const SplashPage: React.FC = () => {
       {formState.position !== null && (
         <p>Your waitlist position: {formState.position}</p>
       )}
+
+      <ForumPreview initialLimit={1} />
     </div>
   );
 };
