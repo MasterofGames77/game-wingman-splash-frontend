@@ -22,11 +22,19 @@ export interface AuthContextType {
 }
 
 // Forum Preview Types
+export interface ForumPreviewProps {
+    initialLimit?: number;
+    userId?: string | null;
+    userEmail?: string | null;
+}
+
 export interface ForumPost {
     author: string;
     content: string;
     timestamp: string;
     likes: number;
+    postId?: string; // For like operations
+    isLiked?: boolean; // Whether current user has liked this post
 }
 
 export interface ForumPreviewData {
@@ -43,4 +51,51 @@ export interface ForumPostsResponse {
     posts: ForumPost[];
     count: number;
     hasMore: boolean;
+}
+
+// Post Management Types
+export interface VerifyUserResponse {
+    success: boolean;
+    userId?: string;
+    email?: string;
+    isApproved?: boolean;
+    hasProAccess?: boolean;
+    message?: string;
+}
+
+export interface PostStatusResponse {
+    success: boolean;
+    canPost: boolean;
+    hasPost: boolean;
+    postId?: string;
+    post?: {
+        content: string;
+        timestamp: string;
+    };
+    message?: string;
+}
+
+export interface CreatePostResponse {
+    success: boolean;
+    message: string;
+    postId?: string;
+    post?: ForumPost;
+}
+
+export interface UpdatePostResponse {
+    success: boolean;
+    message: string;
+    postId?: string;
+}
+
+export interface DeletePostResponse {
+    success: boolean;
+    message: string;
+}
+
+export interface LikePostResponse {
+    success: boolean;
+    message: string;
+    liked: boolean; // Whether the post is now liked (true) or unliked (false)
+    likes: number; // Updated like count
 }

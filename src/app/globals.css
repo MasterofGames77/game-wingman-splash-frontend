@@ -356,6 +356,48 @@ a:hover {
   color: #a7a9be;
 }
 
+.like-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #a7a9be;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.like-button:hover:not(:disabled) {
+  background-color: rgba(233, 69, 96, 0.1);
+  border-color: rgba(233, 69, 96, 0.3);
+  color: #e94560;
+  transform: translateY(-1px);
+}
+
+.like-button.liked {
+  background-color: rgba(233, 69, 96, 0.15);
+  border-color: #e94560;
+  color: #e94560;
+}
+
+.like-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.like-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.like-count {
+  font-weight: 500;
+}
+
 .load-more-button {
   width: 100%;
   padding: 12px 24px;
@@ -444,6 +486,208 @@ a:hover {
   }
 
   .post-content {
+    font-size: 0.9rem;
+  }
+}
+
+/* Post Management Section */
+.post-management-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.post-management-loading {
+  text-align: center;
+  padding: 20px;
+  color: #a7a9be;
+}
+
+.post-management-loading p {
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+.user-post-section,
+.create-post-section {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.user-post-title,
+.create-post-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: #ffffff;
+}
+
+.create-post-subtitle {
+  font-size: 0.85rem;
+  color: #a7a9be;
+  margin: 0 0 16px 0;
+}
+
+.user-post-display {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-post-content {
+  color: #ffffff;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  padding: 12px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.user-post-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.post-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.post-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 100px;
+  box-sizing: border-box;
+}
+
+.post-textarea:focus {
+  outline: none;
+  border-color: #e94560;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.post-textarea::placeholder {
+  color: #a7a9be;
+}
+
+.post-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.post-form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.submit-post-button,
+.edit-post-button,
+.delete-post-button,
+.cancel-post-button {
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.submit-post-button {
+  background-color: #e94560;
+  color: #ffffff;
+}
+
+.submit-post-button:hover:not(:disabled) {
+  background-color: #d63a52;
+  transform: translateY(-1px);
+}
+
+.submit-post-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.edit-post-button {
+  background-color: rgba(233, 69, 96, 0.2);
+  color: #e94560;
+  border: 1px solid #e94560;
+}
+
+.edit-post-button:hover:not(:disabled) {
+  background-color: rgba(233, 69, 96, 0.3);
+}
+
+.delete-post-button {
+  background-color: rgba(233, 69, 96, 0.1);
+  color: #e94560;
+  border: 1px solid rgba(233, 69, 96, 0.3);
+}
+
+.delete-post-button:hover:not(:disabled) {
+  background-color: rgba(233, 69, 96, 0.2);
+}
+
+.cancel-post-button {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #a7a9be;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cancel-post-button:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.edit-post-button:disabled,
+.delete-post-button:disabled,
+.cancel-post-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive Design for Post Management */
+@media (max-width: 768px) {
+  .post-management-section {
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+
+  .user-post-section,
+  .create-post-section {
+    padding: 16px;
+  }
+
+  .user-post-title,
+  .create-post-title {
+    font-size: 1rem;
+  }
+
+  .user-post-actions,
+  .post-form-actions {
+    flex-direction: column;
+  }
+
+  .user-post-actions button,
+  .post-form-actions button {
+    width: 100%;
+  }
+
+  .post-textarea {
     font-size: 0.9rem;
   }
 }

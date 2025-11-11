@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import Image from "next/image";
 import "./globals.css";
-import { FormState, SignUpResponse } from "../../types";
+import { FormState, SignUpResponse, VerifyUserResponse } from "../../types";
 import ForumPreview from "../components/ForumPreview";
 
 const initialFormState: FormState = {
@@ -20,6 +20,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 const SplashPage: React.FC = () => {
   const [formState, setFormState] = useState<FormState>(initialFormState);
+  const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const handleEmailChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,6 +30,29 @@ const SplashPage: React.FC = () => {
     },
     []
   );
+
+  // Verify user when email is entered (for existing waitlist users)
+  const verifyUser = useCallback(async (email: string) => {
+    setIsVerifying(true);
+    try {
+      const response = await axios.get<VerifyUserResponse>(
+        `${API_BASE_URL}/api/public/forum-posts/verify-user`,
+        { params: { email: email.toLowerCase().trim() } }
+      );
+
+      if (response.data.success && response.data.userId) {
+        setVerifiedUserId(response.data.userId);
+        setVerifiedEmail(response.data.email || email);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      // User not found or not on waitlist - that's okay, they can still sign up
+      return false;
+    } finally {
+      setIsVerifying(false);
+    }
+  }, []);
 
   const handleSignUp = useCallback(
     async (e: React.FormEvent) => {
@@ -40,25 +66,50 @@ const SplashPage: React.FC = () => {
           { email: formState.email }
         );
 
+        const userId = response.data.userId || null;
+
         setFormState((prev) => ({
           ...prev,
           message: response.data.message,
           link: response.data.link || null,
           position: response.data.position ?? null,
-          userId: response.data.userId || null,
+          userId: userId,
           loading: false,
         }));
+
+        // If user was added to waitlist (has userId), verify them for posting
+        if (userId) {
+          setVerifiedUserId(userId);
+          setVerifiedEmail(formState.email.toLowerCase().trim());
+        } else {
+          // If no userId in response, try to verify (user might already be on waitlist)
+          await verifyUser(formState.email);
+        }
       } catch (error) {
         console.error("Error adding email to waitlist:", error);
-        setFormState((prev) => ({
-          ...prev,
-          message: "An error occurred. Please try again.",
-          loading: false,
-        }));
+        // If signup fails, try to verify in case user is already on waitlist
+        const verified = await verifyUser(formState.email);
+        if (!verified) {
+          setFormState((prev) => ({
+            ...prev,
+            message: "An error occurred. Please try again.",
+            loading: false,
+          }));
+        }
       }
     },
-    [formState.email]
+    [formState.email, verifyUser]
   );
+
+  // Check if email is in URL params (for returning users)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const emailParam = urlParams.get("email");
+    if (emailParam) {
+      setFormState((prev) => ({ ...prev, email: emailParam }));
+      verifyUser(emailParam);
+    }
+  }, [verifyUser]);
 
   return (
     <div className="home-container">
@@ -118,7 +169,11 @@ const SplashPage: React.FC = () => {
         <p>Your waitlist position: {formState.position}</p>
       )}
 
-      <ForumPreview initialLimit={1} />
+      <ForumPreview
+        initialLimit={1}
+        userId={verifiedUserId}
+        userEmail={verifiedEmail}
+      />
     </div>
   );
 };
