@@ -410,13 +410,23 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       </div>
 
       {forumData.hasMore && (
-        <button
-          className="load-more-button"
-          onClick={handleLoadMore}
-          disabled={loadingMore}
-        >
-          {loadingMore ? "Loading..." : "Load More Posts"}
-        </button>
+        <div className="load-more-container">
+          <button
+            className="load-more-button"
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? "Loading..." : "Load More Posts"}
+          </button>
+          {!userId && (
+            <p className="load-more-cta">
+              Want to add your own post?{" "}
+              <span className="cta-highlight">
+                Sign up for early access above!
+              </span>
+            </p>
+          )}
+        </div>
       )}
 
       {/* Post Management Section - Only show if user is verified */}
@@ -515,8 +525,8 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       {!userId && (
         <div className="preview-cta">
           <p className="preview-cta-text">
-            Want to join the conversation and create your own posts?{" "}
-            <span className="cta-highlight">Sign up for early access!</span>
+            <strong>Ready to join the conversation?</strong> Sign up for early
+            access and become part of our gaming community!
           </p>
         </div>
       )}

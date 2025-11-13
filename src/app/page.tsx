@@ -145,6 +145,12 @@ const SplashPage: React.FC = () => {
       <p className="early-access-note">
         The first 5,000 gamers get Wingman Pro free for 1 year.
       </p>
+      {!verifiedUserId && (
+        <p className="forum-preview-note">
+          <strong>Plus:</strong> Sign up for early access to join the
+          conversation and add your first post to the community below.
+        </p>
+      )}
       {formState.message && <p>{formState.message}</p>}
       {formState.link && (
         <p>
