@@ -23,6 +23,7 @@ const SplashPage: React.FC = () => {
   const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [wasAlreadyOnWaitlist, setWasAlreadyOnWaitlist] = useState(false);
 
   const handleEmailChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,6 +61,33 @@ const SplashPage: React.FC = () => {
 
       setFormState((prev) => ({ ...prev, loading: true, message: "" }));
 
+      // Check if user was already on waitlist before signup attempt
+      // First check if already verified in this session
+      const wasAlreadyVerifiedInSession = verifiedUserId !== null;
+
+      // Also check if user exists on waitlist (in case they weren't verified in this session)
+      let wasAlreadyOnWaitlistBefore = wasAlreadyVerifiedInSession;
+      if (!wasAlreadyVerifiedInSession) {
+        // Quick check if user is already on waitlist
+        try {
+          const checkResponse = await axios.get<VerifyUserResponse>(
+            `${API_BASE_URL}/api/public/forum-posts/verify-user`,
+            { params: { email: formState.email.toLowerCase().trim() } }
+          );
+          if (checkResponse.data.success && checkResponse.data.userId) {
+            wasAlreadyOnWaitlistBefore = true;
+            // Also set verified state since we found them
+            setVerifiedUserId(checkResponse.data.userId);
+            setVerifiedEmail(checkResponse.data.email || formState.email);
+          }
+        } catch (error) {
+          // User not found, so this is a new signup
+          wasAlreadyOnWaitlistBefore = false;
+        }
+      }
+
+      setWasAlreadyOnWaitlist(wasAlreadyOnWaitlistBefore);
+
       try {
         const response = await axios.post<SignUpResponse>(
           `${API_BASE_URL}/api/auth/signup`,
@@ -83,13 +111,19 @@ const SplashPage: React.FC = () => {
           setVerifiedEmail(formState.email.toLowerCase().trim());
         } else {
           // If no userId in response, try to verify (user might already be on waitlist)
-          await verifyUser(formState.email);
+          const verified = await verifyUser(formState.email);
+          if (verified) {
+            // User was already on waitlist
+            setWasAlreadyOnWaitlist(true);
+          }
         }
       } catch (error) {
         console.error("Error adding email to waitlist:", error);
         // If signup fails, try to verify in case user is already on waitlist
         const verified = await verifyUser(formState.email);
-        if (!verified) {
+        if (verified) {
+          setWasAlreadyOnWaitlist(true);
+        } else {
           setFormState((prev) => ({
             ...prev,
             message: "An error occurred. Please try again.",
@@ -98,7 +132,7 @@ const SplashPage: React.FC = () => {
         }
       }
     },
-    [formState.email, verifyUser]
+    [formState.email, verifyUser, verifiedUserId]
   );
 
   // Check if email is in URL params (for returning users)
@@ -151,7 +185,24 @@ const SplashPage: React.FC = () => {
           conversation and add your first post to the community below.
         </p>
       )}
-      {formState.message && <p>{formState.message}</p>}
+      {formState.message && (
+        <div>
+          <p>{formState.message}</p>
+          {formState.message !== "An error occurred. Please try again." &&
+            !wasAlreadyOnWaitlist && (
+              <p
+                style={{
+                  marginTop: "8px",
+                  color: "#a7a9be",
+                  fontSize: "0.9rem",
+                }}
+              >
+                We&apos;ve sent you a confirmation email with your waitlist
+                position!
+              </p>
+            )}
+        </div>
+      )}
       {formState.link && (
         <p>
           You have been approved! Access Video Game Wingman{" "}
