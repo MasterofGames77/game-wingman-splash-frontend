@@ -619,6 +619,29 @@ a:hover {
   cursor: not-allowed;
 }
 
+.moderation-warning {
+  padding: 12px;
+  background-color: rgba(233, 69, 96, 0.15);
+  border: 1px solid rgba(233, 69, 96, 0.4);
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.moderation-warning-message {
+  color: #e94560;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.moderation-detected-words {
+  color: rgba(233, 69, 96, 0.8);
+  font-size: 0.85rem;
+  margin: 8px 0 0 0;
+  font-style: italic;
+}
+
 .post-form-actions {
   display: flex;
   gap: 8px;

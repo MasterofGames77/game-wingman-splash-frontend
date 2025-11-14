@@ -11,6 +11,7 @@ import {
   UpdatePostResponse,
   DeletePostResponse,
   LikePostResponse,
+  ModerationErrorResponse,
 } from "../../types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -35,6 +36,10 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
   const [posting, setPosting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [likingPostId, setLikingPostId] = useState<string | null>(null);
+  const [moderationWarning, setModerationWarning] = useState<string | null>(
+    null
+  );
+  const [detectedWords, setDetectedWords] = useState<string[]>([]);
 
   // Format timestamp to readable date
   const formatDate = (timestamp: string): string => {
@@ -223,6 +228,10 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     e.preventDefault();
     if (!userId || !postContent.trim()) return;
 
+    // Clear any previous moderation warnings
+    setModerationWarning(null);
+    setDetectedWords([]);
+
     setPosting(true);
     try {
       if (isEditing && postStatus?.postId) {
@@ -268,11 +277,36 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         }
       }
     } catch (err: any) {
+      // Check if this is a content moderation error
+      const errorData = err.response?.data;
+
+      if (errorData?.moderationWarning === true) {
+        // This is expected - content moderation blocked the post
+        // Show user-friendly message, don't throw or show alert
+        const moderationError = errorData as ModerationErrorResponse;
+        setModerationWarning(
+          moderationError.message ||
+            "Your post contains inappropriate or offensive content. Please remove any offensive or inappropriate words and try again."
+        );
+        if (
+          moderationError.detectedWords &&
+          moderationError.detectedWords.length > 0
+        ) {
+          setDetectedWords(moderationError.detectedWords);
+          console.error(
+            "Content moderation blocked post:",
+            moderationError.detectedWords
+          );
+        } else {
+          console.error("Content moderation blocked post");
+        }
+        // Don't throw, just return - this is expected validation behavior
+        return;
+      }
+
+      // For other errors, handle appropriately
       console.error("Error submitting post:", err);
-      alert(
-        err.response?.data?.message ||
-          "Failed to submit post. Please try again."
-      );
+      alert(errorData?.message || "Failed to submit post. Please try again.");
     } finally {
       setPosting(false);
     }
@@ -334,6 +368,9 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       setPostContent("");
     }
     setIsEditing(false);
+    // Clear any moderation warnings when canceling
+    setModerationWarning(null);
+    setDetectedWords([]);
   };
 
   if (loading) {
@@ -467,12 +504,31 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                   <textarea
                     className="post-textarea"
                     value={postContent}
-                    onChange={(e) => setPostContent(e.target.value)}
+                    onChange={(e) => {
+                      setPostContent(e.target.value);
+                      // Clear moderation warning when user starts typing
+                      if (moderationWarning) {
+                        setModerationWarning(null);
+                        setDetectedWords([]);
+                      }
+                    }}
                     placeholder="Share your thoughts..."
                     rows={4}
                     required
                     disabled={posting}
                   />
+                  {moderationWarning && (
+                    <div className="moderation-warning">
+                      <p className="moderation-warning-message">
+                        ⚠️ {moderationWarning}
+                      </p>
+                      {detectedWords.length > 0 && (
+                        <p className="moderation-detected-words">
+                          Detected words: {detectedWords.join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="post-form-actions">
                     <button
                       type="submit"
@@ -503,12 +559,31 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                 <textarea
                   className="post-textarea"
                   value={postContent}
-                  onChange={(e) => setPostContent(e.target.value)}
+                  onChange={(e) => {
+                    setPostContent(e.target.value);
+                    // Clear moderation warning when user starts typing
+                    if (moderationWarning) {
+                      setModerationWarning(null);
+                      setDetectedWords([]);
+                    }
+                  }}
                   placeholder="Share your thoughts about your favorite hero..."
                   rows={4}
                   required
                   disabled={posting}
                 />
+                {moderationWarning && (
+                  <div className="moderation-warning">
+                    <p className="moderation-warning-message">
+                      ⚠️ {moderationWarning}
+                    </p>
+                    {detectedWords.length > 0 && (
+                      <p className="moderation-detected-words">
+                        Detected words: {detectedWords.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <button
                   type="submit"
                   className="submit-post-button"

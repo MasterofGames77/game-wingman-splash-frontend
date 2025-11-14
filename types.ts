@@ -99,3 +99,11 @@ export interface LikePostResponse {
     liked: boolean; // Whether the post is now liked (true) or unliked (false)
     likes: number; // Updated like count
 }
+
+// Content Moderation Error Response
+export interface ModerationErrorResponse {
+    success: false;
+    message: string;
+    detectedWords?: string[];
+    moderationWarning: true;
+}
