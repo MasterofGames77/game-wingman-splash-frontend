@@ -358,11 +358,32 @@ a:hover {
   color: #a7a9be;
 }
 
+.post-edited {
+  color: #8b8d9f;
+  font-style: italic;
+}
+
 .post-content {
   color: #ffffff;
   line-height: 1.6;
   margin-bottom: 12px;
   font-size: 0.95rem;
+}
+
+.post-attachments {
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.post-image {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  object-fit: contain;
+  background-color: rgba(0, 0, 0, 0.2);
 }
 
 .post-footer {

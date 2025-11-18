@@ -12,9 +12,21 @@ import {
   DeletePostResponse,
   LikePostResponse,
   ModerationErrorResponse,
+  Attachment,
 } from "../../types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
+// Helper function to extract URL from attachment (handles both string and object)
+const getAttachmentUrl = (attachment: Attachment): string => {
+  if (typeof attachment === "string") {
+    return attachment;
+  }
+  if (attachment && typeof attachment === "object" && "url" in attachment) {
+    return attachment.url;
+  }
+  return "";
+};
 
 const ForumPreview: React.FC<ForumPreviewProps> = ({
   initialLimit = 1,
@@ -414,9 +426,35 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
           <div key={index} className="forum-post-preview">
             <div className="post-header">
               <span className="post-author">Posted by {post.author}</span>
-              <span className="post-date">{formatDate(post.timestamp)}</span>
+              <span className="post-date">
+                on {formatDate(post.timestamp)}
+                {post.edited && post.editedAt && (
+                  <span className="post-edited"> (edited on {formatDate(post.editedAt)})</span>
+                )}
+              </span>
             </div>
             <div className="post-content">{post.content}</div>
+            {post.attachments && post.attachments.length > 0 && (
+              <div className="post-attachments">
+                {post.attachments.map((attachment, imgIndex) => {
+                  const imageUrl = getAttachmentUrl(attachment);
+                  if (!imageUrl) return null;
+                  return (
+                    <img
+                      key={imgIndex}
+                      src={imageUrl}
+                      alt={`Attachment ${imgIndex + 1}`}
+                      className="post-image"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error("Failed to load image:", imageUrl);
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
             <div className="post-footer">
               {userId && post.postId ? (
                 <button
@@ -482,6 +520,27 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                   <div className="user-post-content">
                     {postStatus.post?.content}
                   </div>
+                  {postStatus.post?.attachments && postStatus.post.attachments.length > 0 && (
+                    <div className="post-attachments">
+                      {postStatus.post.attachments.map((attachment, imgIndex) => {
+                        const imageUrl = getAttachmentUrl(attachment);
+                        if (!imageUrl) return null;
+                        return (
+                          <img
+                            key={imgIndex}
+                            src={imageUrl}
+                            alt={`Attachment ${imgIndex + 1}`}
+                            className="post-image"
+                            loading="lazy"
+                            onError={(e) => {
+                              console.error("Failed to load image:", imageUrl);
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
                   <div className="user-post-actions">
                     <button
                       className="edit-post-button"

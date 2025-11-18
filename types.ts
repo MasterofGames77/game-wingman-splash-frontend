@@ -28,6 +28,9 @@ export interface ForumPreviewProps {
     userEmail?: string | null;
 }
 
+// Attachment can be a URL string or an object with url property
+export type Attachment = string | { url: string; [key: string]: any };
+
 export interface ForumPost {
     author: string;
     content: string;
@@ -35,6 +38,9 @@ export interface ForumPost {
     likes: number;
     postId?: string; // For like operations
     isLiked?: boolean; // Whether current user has liked this post
+    attachments?: Attachment[]; // Array of image URLs or attachment objects
+    edited?: boolean; // Whether the post has been edited
+    editedAt?: string | null; // Timestamp of the last edit (or null if never edited)
 }
 
 export interface ForumPreviewData {
@@ -71,6 +77,9 @@ export interface PostStatusResponse {
     post?: {
         content: string;
         timestamp: string;
+        attachments?: Attachment[]; // Array of image URLs or attachment objects
+        edited?: boolean; // Whether the post has been edited
+        editedAt?: string | null; // Timestamp of the last edit (or null if never edited)
     };
     message?: string;
 }
