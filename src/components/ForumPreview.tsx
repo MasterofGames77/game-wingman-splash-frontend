@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import {
   ForumPreviewProps,
@@ -13,6 +13,7 @@ import {
   LikePostResponse,
   ModerationErrorResponse,
   Attachment,
+  UploadImageResponse,
 } from "../../types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -53,6 +54,22 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
   );
   const [detectedWords, setDetectedWords] = useState<string[]>([]);
 
+  // Image upload state
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [uploadedImagePublicId, setUploadedImagePublicId] = useState<
+    string | null
+  >(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageModerationWarning, setImageModerationWarning] = useState<
+    string | null
+  >(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Format timestamp to readable date
   const formatDate = (timestamp: string): string => {
     try {
@@ -67,6 +84,248 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     } catch {
       return "Unknown date";
     }
+  };
+
+  // Handle image file selection
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage("Please select an image file");
+      setTimeout(() => setErrorMessage(null), 3000);
+      return;
+    }
+
+    // Validate file size (e.g., 5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage("Image size must be less than 5MB");
+      setTimeout(() => setErrorMessage(null), 3000);
+      return;
+    }
+
+    setSelectedImage(file);
+    setImageModerationWarning(null);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle button click to trigger file input
+  const handleImageButtonClick = () => {
+    if (fileInputRef.current && !posting && !uploadingImage) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Handle image upload
+  const handleImageUpload = async (): Promise<{
+    success: boolean;
+    imageUrl?: string;
+    imagePublicId?: string;
+  }> => {
+    if (!selectedImage || !userId) {
+      // console.log("Image upload failed: missing selectedImage or userId", {
+      //   selectedImage: !!selectedImage,
+      //   userId: !!userId,
+      // });
+      return { success: false };
+    }
+
+    setUploadingImage(true);
+    setImageModerationWarning(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("image", selectedImage);
+      formData.append("userId", userId);
+
+      // Don't include postId in image upload - let the frontend handle the PUT request separately
+      // The backend's automatic update feature seems to be causing issues
+
+      // Try the new route first, fallback to main app route if 404
+      let response;
+      try {
+        response = await axios.post<UploadImageResponse>(
+          `${API_BASE_URL}/api/public/forum-posts/upload-image`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+      } catch (firstError: any) {
+        // If 404, try the alternative route (main app route)
+        if (firstError.response?.status === 404) {
+          // console.log(
+          //   "Route /api/public/forum-posts/upload-image not found, trying /api/uploadForumImage"
+          // );
+          response = await axios.post<UploadImageResponse>(
+            `${API_BASE_URL}/api/uploadForumImage`,
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+        } else {
+          throw firstError; // Re-throw if it's not a 404
+        }
+      }
+
+      // Handle multiple response formats:
+      // 1. New format: { success: true, images: [{ url, name, size, type }] }
+      // 2. Legacy format: { success: true, image: { url, publicId } }
+      // 3. Legacy format: { success: true, imageUrl, imagePublicId }
+
+      let imageUrl: string | undefined;
+      let imagePublicId: string | undefined;
+
+      // Type assertion to handle the response data
+      const responseData = response.data as UploadImageResponse & {
+        images?: Array<{ url: string; name: string; publicId?: string }>;
+      };
+
+      // Check for new format (images array)
+      if (
+        responseData.images &&
+        Array.isArray(responseData.images) &&
+        responseData.images.length > 0
+      ) {
+        const firstImage = responseData.images[0];
+        imageUrl = firstImage.url;
+        imagePublicId = firstImage.name || firstImage.publicId; // Use name as publicId fallback
+        // console.log("Using new images array format:", firstImage);
+      }
+      // Check for legacy nested image object format
+      else if (responseData.image) {
+        imageUrl = responseData.image.url;
+        imagePublicId = responseData.image.publicId;
+        // console.log("Using legacy image object format");
+      }
+      // Check for legacy flat format
+      else {
+        imageUrl = responseData.imageUrl;
+        imagePublicId = responseData.imagePublicId;
+        // console.log("Using legacy flat format");
+      }
+
+      // console.log("Image upload response:", {
+      //   success: responseData.success,
+      //   hasImagesArray: !!responseData.images,
+      //   hasImageObject: !!responseData.image,
+      //   imageUrl: imageUrl,
+      //   imagePublicId: imagePublicId,
+      //   fullResponse: responseData,
+      // });
+
+      if (response.data.success && imageUrl) {
+        // Validate the image URL format
+        if (
+          !imageUrl.startsWith("http://") &&
+          !imageUrl.startsWith("https://")
+        ) {
+          console.error("Invalid image URL format:", imageUrl);
+          setErrorMessage("Invalid image URL received from server");
+          setTimeout(() => setErrorMessage(null), 5000);
+          return { success: false };
+        }
+
+        // console.log("Setting uploaded image URL:", imageUrl);
+        // console.log("Image publicId/name:", imagePublicId);
+
+        // Use the image name as publicId if publicId is not provided
+        // The backend returns name in the images array, which we can use for deletion
+        // responseData is already declared above
+        const finalPublicId =
+          imagePublicId ||
+          (responseData.images && responseData.images[0]?.name) ||
+          "image";
+
+        setUploadedImageUrl(imageUrl);
+        setUploadedImagePublicId(finalPublicId);
+        // Show success message
+        setSuccessMessage(
+          response.data.message || "Image uploaded successfully"
+        );
+        setTimeout(() => setSuccessMessage(null), 3000); // Auto-hide after 3 seconds
+        return {
+          success: true,
+          imageUrl: imageUrl,
+          imagePublicId: finalPublicId,
+        };
+      } else if (response.data.moderationWarning) {
+        // Image moderation failed
+        setImageModerationWarning(
+          response.data.message ||
+            "Image contains inappropriate content and cannot be uploaded."
+        );
+        // Clear selected image
+        setSelectedImage(null);
+        setImagePreview(null);
+        return { success: false };
+      } else {
+        setErrorMessage(response.data.message || "Failed to upload image");
+        setTimeout(() => setErrorMessage(null), 5000); // Auto-hide after 5 seconds
+        return { success: false };
+      }
+    } catch (err: any) {
+      const errorData = err.response?.data;
+
+      // Handle 404 specifically - route not found
+      if (err.response?.status === 404) {
+        console.error("Image upload route not found (404):", {
+          attemptedRoutes: [
+            `${API_BASE_URL}/api/public/forum-posts/upload-image`,
+            `${API_BASE_URL}/api/uploadForumImage`,
+          ],
+          error: err.message,
+        });
+        setErrorMessage(
+          "Image upload endpoint not found. Please check that the backend server is running and the route is registered."
+        );
+        setTimeout(() => setErrorMessage(null), 5000);
+        return { success: false };
+      }
+
+      if (errorData?.moderationWarning) {
+        setImageModerationWarning(
+          errorData.message ||
+            "Image contains inappropriate content and cannot be uploaded."
+        );
+        setSelectedImage(null);
+        setImagePreview(null);
+      } else {
+        console.error("Error uploading image:", err);
+        setErrorMessage(
+          errorData?.message ||
+            errorData?.error ||
+            `Failed to upload image: ${
+              err.message || "Unknown error"
+            }. Please try again.`
+        );
+        setTimeout(() => setErrorMessage(null), 5000); // Auto-hide after 5 seconds
+      }
+      return { success: false };
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Remove selected/uploaded image
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    setUploadedImageUrl(null);
+    setUploadedImagePublicId(null);
+    setImageModerationWarning(null);
   };
 
   // Check post status when userId is available
@@ -89,9 +348,26 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
           if (response.data.hasPost && response.data.post) {
             setPostContent(response.data.post.content);
             setIsEditing(false);
+            // Load existing image if present
+            if (
+              response.data.post.attachments &&
+              response.data.post.attachments.length > 0
+            ) {
+              const firstAttachment = response.data.post.attachments[0];
+              const imageUrl = getAttachmentUrl(firstAttachment);
+              if (imageUrl) {
+                setUploadedImageUrl(imageUrl);
+                // Note: publicId might not be in the response, but that's okay for display
+              }
+            } else {
+              setUploadedImageUrl(null);
+              setUploadedImagePublicId(null);
+            }
           } else {
             setPostContent("");
             setIsEditing(false);
+            setUploadedImageUrl(null);
+            setUploadedImagePublicId(null);
           }
         }
       } catch (err) {
@@ -238,59 +514,405 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
   // Create or update post
   const handleSubmitPost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId || !postContent.trim()) return;
+    if (!userId) return;
+
+    // Validate: must have either content or image (or both)
+    const hasContent = postContent.trim().length > 0;
+    const hasImage = uploadedImageUrl && uploadedImagePublicId;
+    const hasNewImage = selectedImage && !uploadedImageUrl;
+
+    if (!hasContent && !hasImage && !hasNewImage) {
+      setErrorMessage("Please add a message or upload an image");
+      setTimeout(() => setErrorMessage(null), 3000);
+      return;
+    }
 
     // Clear any previous moderation warnings
     setModerationWarning(null);
     setDetectedWords([]);
+    setImageModerationWarning(null);
 
     setPosting(true);
     try {
-      if (isEditing && postStatus?.postId) {
-        // Update existing post
-        const response = await axios.put<UpdatePostResponse>(
-          `${API_BASE_URL}/api/public/forum-posts/${postStatus.postId}`,
-          { userId, content: postContent.trim() }
-        );
+      // Track if post had an image before editing
+      const hadImageBefore =
+        isEditing &&
+        postStatus?.post?.attachments &&
+        postStatus.post.attachments.length > 0;
 
-        if (response.data.success) {
-          setIsEditing(false);
-          await refreshPosts();
-          // Re-check status to update state
-          const statusResponse = await axios.get<PostStatusResponse>(
-            `${API_BASE_URL}/api/public/forum-posts/check-status`,
-            { params: { userId } }
-          );
-          if (statusResponse.data.success) {
-            setPostStatus(statusResponse.data);
+      // If there's a new image selected, upload it first
+      let finalImageUrl = uploadedImageUrl;
+      let finalImagePublicId = uploadedImagePublicId;
+
+      // Always upload if a new image file is selected (even if there's an existing image)
+      if (selectedImage) {
+        // console.log("New image selected, uploading...");
+        // console.log(
+        //   "Current state - isEditing:",
+        //   isEditing,
+        //   "postId:",
+        //   postStatus?.postId
+        // );
+        const uploadResult = await handleImageUpload();
+        // console.log("Upload result:", uploadResult);
+        if (
+          !uploadResult.success ||
+          !uploadResult.imageUrl ||
+          !uploadResult.imagePublicId
+        ) {
+          console.error("Image upload failed, aborting post update");
+          setPosting(false);
+          return; // Image upload failed or was moderated
+        }
+        // console.log("Image uploaded successfully:", uploadResult.imageUrl);
+        finalImageUrl = uploadResult.imageUrl;
+        finalImagePublicId = uploadResult.imagePublicId;
+        // Also update state immediately
+        setUploadedImageUrl(uploadResult.imageUrl);
+        setUploadedImagePublicId(uploadResult.imagePublicId);
+      } else {
+        // console.log("No new image selected. Using existing:", finalImageUrl);
+      }
+
+      // console.log(
+      //   "About to check if editing. isEditing:",
+      //   isEditing,
+      //   "postId:",
+      //   postStatus?.postId
+      // );
+      // console.log(
+      //   "Final image URL:",
+      //   finalImageUrl,
+      //   "Final image PublicId:",
+      //   finalImagePublicId
+      // );
+
+      if (isEditing && postStatus?.postId) {
+        // console.log("Proceeding with PUT request to update post");
+        // console.log(
+        //   "PUT URL will be:",
+        //   `${API_BASE_URL}/api/public/forum-posts/${postStatus.postId}`
+        // );
+        // Update existing post
+        const updateData: any = {
+          userId,
+        };
+
+        // Always include content (even if empty, backend might need it)
+        if (postContent.trim()) {
+          updateData.content = postContent.trim();
+        }
+
+        // Handle image changes - use attachments array format (like main app)
+        if (finalImageUrl && finalImagePublicId) {
+          // Image is present (either new upload or existing)
+          // Validate URL before sending
+          if (
+            !finalImageUrl.startsWith("http://") &&
+            !finalImageUrl.startsWith("https://")
+          ) {
+            console.error("Invalid image URL in update data:", finalImageUrl);
+            setErrorMessage(
+              "Invalid image URL. Please try uploading the image again."
+            );
+            setTimeout(() => setErrorMessage(null), 5000);
+            setPosting(false);
+            setIsEditing(false);
+            return;
           }
+          // Use attachments array format (like main app) - this is more reliable
+          updateData.attachments = [
+            {
+              type: "image",
+              url: finalImageUrl,
+              name: finalImagePublicId || "image",
+              publicId: finalImagePublicId, // Include publicId for deletion
+            },
+          ];
+          // console.log("Including image in update (attachments format):", {
+          //   attachments: updateData.attachments,
+          //   imageUrl: finalImageUrl,
+          //   imagePublicId: finalImagePublicId,
+          //   urlPreview: finalImageUrl.substring(0, 80) + "...",
+          //   fullUrl: finalImageUrl, // Log full URL for debugging
+          //   urlIsImageKit: finalImageUrl.includes("ik.imagekit.io"),
+          // });
+
+          // Warn if URL doesn't look like a valid ImageKit URL
+          if (
+            !finalImageUrl.includes("ik.imagekit.io") &&
+            !finalImageUrl.includes("imagekit")
+          ) {
+            console.warn(
+              "Image URL doesn't appear to be from ImageKit:",
+              finalImageUrl
+            );
+          }
+        } else if (hadImageBefore && !finalImageUrl && !finalImagePublicId) {
+          // Post had image before but now it's removed (user clicked remove)
+          updateData.removeImage = true;
+          // console.log("Removing image from post");
+        } else {
+          // console.log("No image changes - keeping existing or no image");
+        }
+
+        // Always ensure we have content or image (backend requirement)
+        if (
+          !updateData.content &&
+          !updateData.attachments &&
+          !updateData.removeImage
+        ) {
+          // This shouldn't happen due to validation, but just in case
+          console.warn("Update request has neither content nor image");
+        }
+
+        // console.log("Updating post with data:", updateData);
+        // console.log("Post ID:", postStatus.postId);
+        // console.log("Post ID type:", typeof postStatus.postId);
+        // console.log("Post ID length:", postStatus.postId?.length);
+
+        // Validate postId before making request
+        if (
+          !postStatus.postId ||
+          typeof postStatus.postId !== "string" ||
+          postStatus.postId.trim().length === 0
+        ) {
+          console.error("Invalid postId:", postStatus.postId);
+          setErrorMessage(
+            "Invalid post ID. Please refresh the page and try again."
+          );
+          setTimeout(() => setErrorMessage(null), 5000);
+          setPosting(false);
+          setIsEditing(false);
+          return;
+        }
+
+        // Ensure postId is a valid MongoDB ObjectId format (24 hex characters)
+        const postIdPattern = /^[0-9a-fA-F]{24}$/;
+        if (!postIdPattern.test(postStatus.postId)) {
+          console.error(
+            "PostId is not a valid MongoDB ObjectId:",
+            postStatus.postId
+          );
+          setErrorMessage(
+            "Invalid post ID format. Please refresh the page and try again."
+          );
+          setTimeout(() => setErrorMessage(null), 5000);
+          setPosting(false);
+          setIsEditing(false);
+          return;
+        }
+
+        try {
+          const putUrl = `${API_BASE_URL}/api/public/forum-posts/${postStatus.postId}`;
+          // console.log("Sending PUT request to:", putUrl);
+          // console.log(
+          //   "PUT request payload:",
+          //   JSON.stringify(updateData, null, 2)
+          // );
+
+          const response = await axios.put<UpdatePostResponse>(
+            putUrl,
+            updateData,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          // console.log("Update response:", response.data);
+
+          if (response.data.success) {
+            // Show success message
+            setSuccessMessage("Post updated successfully");
+            setTimeout(() => setSuccessMessage(null), 3000);
+
+            // Close edit mode immediately - do this first
+            setIsEditing(false);
+
+            // Clear temporary image state
+            setSelectedImage(null);
+            setImagePreview(null);
+
+            // Refresh posts list
+            await refreshPosts();
+
+            // Re-check status to update state with new image
+            const statusResponse = await axios.get<PostStatusResponse>(
+              `${API_BASE_URL}/api/public/forum-posts/check-status`,
+              { params: { userId } }
+            );
+            // console.log("Status check response:", statusResponse.data);
+
+            if (statusResponse.data.success) {
+              setPostStatus(statusResponse.data);
+              // Reload image from updated post
+              if (statusResponse.data.hasPost && statusResponse.data.post) {
+                setPostContent(statusResponse.data.post.content);
+                if (
+                  statusResponse.data.post.attachments &&
+                  statusResponse.data.post.attachments.length > 0
+                ) {
+                  const firstAttachment =
+                    statusResponse.data.post.attachments[0];
+                  const imageUrl = getAttachmentUrl(firstAttachment);
+                  // console.log("Loaded image from post:", {
+                  //   imageUrl: imageUrl,
+                  //   attachment: firstAttachment,
+                  //   attachmentType: typeof firstAttachment,
+                  // });
+                  if (imageUrl) {
+                    // Verify the image URL is valid before setting it
+                    if (
+                      imageUrl.startsWith("http://") ||
+                      imageUrl.startsWith("https://")
+                    ) {
+                      setUploadedImageUrl(imageUrl);
+                      // Extract publicId from attachment if available
+                      if (
+                        typeof firstAttachment === "object" &&
+                        "publicId" in firstAttachment
+                      ) {
+                        setUploadedImagePublicId(
+                          firstAttachment.publicId as string
+                        );
+                      }
+                    } else {
+                      console.warn(
+                        "Invalid image URL format from post:",
+                        imageUrl
+                      );
+                      setUploadedImageUrl(null);
+                      setUploadedImagePublicId(null);
+                    }
+                  } else {
+                    setUploadedImageUrl(null);
+                    setUploadedImagePublicId(null);
+                  }
+                } else {
+                  // console.log("No attachments in updated post");
+                  setUploadedImageUrl(null);
+                  setUploadedImagePublicId(null);
+                }
+              }
+            }
+          } else {
+            // Update failed - show error but still close edit mode
+            console.error("Update failed:", response.data);
+            setErrorMessage(response.data.message || "Failed to update post");
+            setTimeout(() => setErrorMessage(null), 5000);
+            setIsEditing(false);
+          }
+        } catch (updateError: any) {
+          console.error("Error updating post:", updateError);
+          console.error("Error response:", updateError.response?.data);
+          console.error("Error status:", updateError.response?.status);
+          console.error("Error message:", updateError.message);
+
+          // Check if it's a network error or server error
+          const errorMessage =
+            updateError.response?.data?.message ||
+            updateError.response?.data?.error ||
+            updateError.message ||
+            "Failed to update post. Please try again.";
+
+          // If the image was uploaded successfully but the update failed,
+          // the image is still in ImageKit, so we should still close the edit UI
+          // and let the user know they may need to refresh
+          if (finalImageUrl && finalImagePublicId) {
+            console.warn(
+              "Image was uploaded but post update failed. Image URL:",
+              finalImageUrl
+            );
+            setErrorMessage(
+              `${errorMessage} The image was uploaded successfully. Please refresh the page to see it.`
+            );
+          } else {
+            setErrorMessage(errorMessage);
+          }
+
+          setTimeout(() => setErrorMessage(null), 5000);
+          setIsEditing(false);
         }
       } else {
         // Create new post
-        const response = await axios.post<CreatePostResponse>(
-          `${API_BASE_URL}/api/public/forum-posts`,
-          { userId, content: postContent.trim() }
-        );
+        try {
+          const createData: any = {
+            userId,
+            content: postContent.trim() || undefined,
+          };
 
-        if (response.data.success) {
-          setPostContent("");
-          await refreshPosts();
-          // Re-check status to update state
-          const statusResponse = await axios.get<PostStatusResponse>(
-            `${API_BASE_URL}/api/public/forum-posts/check-status`,
-            { params: { userId } }
+          // Use attachments array format (like main app) - this is more reliable
+          if (finalImageUrl && finalImagePublicId) {
+            // Validate URL before sending
+            if (
+              !finalImageUrl.startsWith("http://") &&
+              !finalImageUrl.startsWith("https://")
+            ) {
+              console.error("Invalid image URL in create data:", finalImageUrl);
+              setErrorMessage(
+                "Invalid image URL. Please try uploading the image again."
+              );
+              setTimeout(() => setErrorMessage(null), 5000);
+              setPosting(false);
+              return;
+            }
+            createData.attachments = [
+              {
+                type: "image",
+                url: finalImageUrl,
+                name: finalImagePublicId || "image",
+                publicId: finalImagePublicId, // Include publicId for deletion
+              },
+            ];
+            // console.log("Including image in create (attachments format):", {
+            //   attachments: createData.attachments,
+            //   imageUrl: finalImageUrl,
+            //   imagePublicId: finalImagePublicId,
+            // });
+          }
+
+          const response = await axios.post<CreatePostResponse>(
+            `${API_BASE_URL}/api/public/forum-posts`,
+            createData
           );
-          if (statusResponse.data.success) {
-            setPostStatus(statusResponse.data);
-            if (statusResponse.data.hasPost && statusResponse.data.post) {
-              setPostContent(statusResponse.data.post.content);
+
+          if (response.data.success) {
+            setPostContent("");
+            // Clear image state
+            setSelectedImage(null);
+            setImagePreview(null);
+            setUploadedImageUrl(null);
+            setUploadedImagePublicId(null);
+            await refreshPosts();
+            // Re-check status to update state
+            const statusResponse = await axios.get<PostStatusResponse>(
+              `${API_BASE_URL}/api/public/forum-posts/check-status`,
+              { params: { userId } }
+            );
+            if (statusResponse.data.success) {
+              setPostStatus(statusResponse.data);
+              if (statusResponse.data.hasPost && statusResponse.data.post) {
+                setPostContent(statusResponse.data.post.content);
+              }
             }
           }
+        } catch (createError: any) {
+          console.error("Error creating post:", createError);
+          const errorData = createError.response?.data;
+          setErrorMessage(
+            errorData?.message || "Failed to create post. Please try again."
+          );
+          setTimeout(() => setErrorMessage(null), 5000);
         }
       }
     } catch (err: any) {
       // Check if this is a content moderation error
       const errorData = err.response?.data;
+
+      console.error("Error in handleSubmitPost:", err);
+      console.error("Error response data:", errorData);
 
       if (errorData?.moderationWarning === true) {
         // This is expected - content moderation blocked the post
@@ -313,12 +935,23 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
           console.error("Content moderation blocked post");
         }
         // Don't throw, just return - this is expected validation behavior
+        // But still close edit mode if we're editing
+        if (isEditing) {
+          setIsEditing(false);
+        }
         return;
       }
 
       // For other errors, handle appropriately
       console.error("Error submitting post:", err);
-      alert(errorData?.message || "Failed to submit post. Please try again.");
+      setErrorMessage(
+        errorData?.message || "Failed to submit post. Please try again."
+      );
+      setTimeout(() => setErrorMessage(null), 5000);
+      // Always close edit mode on error so user isn't stuck
+      if (isEditing) {
+        setIsEditing(false);
+      }
     } finally {
       setPosting(false);
     }
@@ -327,11 +960,14 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
   // Delete post
   const handleDeletePost = async () => {
     if (!userId || !postStatus?.postId) return;
+    setShowDeleteModal(true);
+  };
 
-    if (!confirm("Are you sure you want to delete your post?")) {
-      return;
-    }
+  // Confirm delete post
+  const handleConfirmDelete = async () => {
+    if (!userId || !postStatus?.postId) return;
 
+    setShowDeleteModal(false);
     setDeleting(true);
     try {
       const response = await axios.request<DeletePostResponse>({
@@ -364,6 +1000,11 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     }
   };
 
+  // Cancel delete
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+  };
+
   // Start editing
   const handleStartEdit = () => {
     if (postStatus?.post?.content) {
@@ -383,6 +1024,22 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     // Clear any moderation warnings when canceling
     setModerationWarning(null);
     setDetectedWords([]);
+    // Reset image state to existing image
+    if (
+      postStatus?.post?.attachments &&
+      postStatus.post.attachments.length > 0
+    ) {
+      const firstAttachment = postStatus.post.attachments[0];
+      const imageUrl = getAttachmentUrl(firstAttachment);
+      if (imageUrl) {
+        setUploadedImageUrl(imageUrl);
+      }
+    } else {
+      setSelectedImage(null);
+      setImagePreview(null);
+      setUploadedImageUrl(null);
+      setUploadedImagePublicId(null);
+    }
   };
 
   if (loading) {
@@ -404,6 +1061,60 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
 
   return (
     <div className="preview-section forum-preview">
+      {/* Success/Error Toast Messages */}
+      {successMessage && (
+        <div className="toast-message toast-success">
+          <span className="toast-icon">✓</span>
+          <span className="toast-text">{successMessage}</span>
+          <button
+            className="toast-close"
+            onClick={() => setSuccessMessage(null)}
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      {errorMessage && (
+        <div className="toast-message toast-error">
+          <span className="toast-icon">⚠</span>
+          <span className="toast-text">{errorMessage}</span>
+          <button
+            className="toast-close"
+            onClick={() => setErrorMessage(null)}
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={handleCancelDelete}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Delete Post</h3>
+            <p className="modal-message">
+              Are you sure you want to delete your post?
+            </p>
+            <div className="modal-actions">
+              <button
+                className="modal-button modal-button-cancel"
+                onClick={handleCancelDelete}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="modal-button modal-button-confirm"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="preview-header">
         <h2 className="preview-title">Join Our Gaming Community</h2>
         <p className="preview-subtitle">
@@ -429,7 +1140,10 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
               <span className="post-date">
                 on {formatDate(post.timestamp)}
                 {post.edited && post.editedAt && (
-                  <span className="post-edited"> (edited on {formatDate(post.editedAt)})</span>
+                  <span className="post-edited">
+                    {" "}
+                    (edited on {formatDate(post.editedAt)})
+                  </span>
                 )}
               </span>
             </div>
@@ -440,6 +1154,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                   const imageUrl = getAttachmentUrl(attachment);
                   if (!imageUrl) return null;
                   return (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       key={imgIndex}
                       src={imageUrl}
@@ -447,7 +1162,8 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                       className="post-image"
                       loading="lazy"
                       onError={(e) => {
-                        console.error("Failed to load image:", imageUrl);
+                        // Silently hide broken images - don't log as error since this is expected
+                        // when images are uploaded but not yet saved to posts, or when images are deleted
                         e.currentTarget.style.display = "none";
                       }}
                     />
@@ -517,30 +1233,52 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
               <h3 className="user-post-title">Your Post</h3>
               {!isEditing ? (
                 <div className="user-post-display">
+                  <div className="post-header">
+                    <span className="post-author">
+                      Posted by {userEmail || "you"}
+                    </span>
+                    <span className="post-date">
+                      on{" "}
+                      {postStatus.post?.timestamp
+                        ? formatDate(postStatus.post.timestamp)
+                        : "Unknown date"}
+                      {postStatus.post?.edited && postStatus.post?.editedAt && (
+                        <span className="post-edited">
+                          {" "}
+                          (edited on {formatDate(postStatus.post.editedAt)})
+                        </span>
+                      )}
+                    </span>
+                  </div>
                   <div className="user-post-content">
                     {postStatus.post?.content}
                   </div>
-                  {postStatus.post?.attachments && postStatus.post.attachments.length > 0 && (
-                    <div className="post-attachments">
-                      {postStatus.post.attachments.map((attachment, imgIndex) => {
-                        const imageUrl = getAttachmentUrl(attachment);
-                        if (!imageUrl) return null;
-                        return (
-                          <img
-                            key={imgIndex}
-                            src={imageUrl}
-                            alt={`Attachment ${imgIndex + 1}`}
-                            className="post-image"
-                            loading="lazy"
-                            onError={(e) => {
-                              console.error("Failed to load image:", imageUrl);
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
+                  {postStatus.post?.attachments &&
+                    postStatus.post.attachments.length > 0 && (
+                      <div className="post-attachments">
+                        {postStatus.post.attachments.map(
+                          (attachment, imgIndex) => {
+                            const imageUrl = getAttachmentUrl(attachment);
+                            if (!imageUrl) return null;
+                            return (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                key={imgIndex}
+                                src={imageUrl}
+                                alt={`Attachment ${imgIndex + 1}`}
+                                className="post-image"
+                                loading="lazy"
+                                onError={(e) => {
+                                  // Silently hide broken images - don't log as error
+                                  // This is expected when images are uploaded but not yet saved to posts
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            );
+                          }
+                        )}
+                      </div>
+                    )}
                   <div className="user-post-actions">
                     <button
                       className="edit-post-button"
@@ -559,7 +1297,10 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                   </div>
                 </div>
               ) : (
-                <form onSubmit={handleSubmitPost} className="post-form">
+                <form
+                  onSubmit={handleSubmitPost}
+                  className="post-form edit-post-form"
+                >
                   <textarea
                     className="post-textarea"
                     value={postContent}
@@ -573,9 +1314,56 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                     }}
                     placeholder="Share your thoughts..."
                     rows={4}
-                    required
                     disabled={posting}
                   />
+                  {/* Image Upload Section - Inline layout */}
+                  <div className="image-upload-section-inline">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      disabled={posting || uploadingImage}
+                      className="image-upload-input"
+                    />
+                    <button
+                      type="button"
+                      className="change-image-button"
+                      onClick={handleImageButtonClick}
+                      disabled={posting || uploadingImage}
+                    >
+                      {uploadingImage
+                        ? "Uploading..."
+                        : uploadedImageUrl || selectedImage
+                        ? "Change Image"
+                        : "Upload Image"}
+                    </button>
+                    {(imagePreview || uploadedImageUrl) && (
+                      <div className="image-preview-inline">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imagePreview || uploadedImageUrl || ""}
+                          alt="Preview"
+                          className="image-preview-small"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="remove-image-button"
+                          disabled={posting || uploadingImage}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                    {imageModerationWarning && (
+                      <div className="moderation-warning">
+                        <p className="moderation-warning-message">
+                          ⚠️ {imageModerationWarning}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                   {moderationWarning && (
                     <div className="moderation-warning">
                       <p className="moderation-warning-message">
@@ -592,7 +1380,12 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                     <button
                       type="submit"
                       className="submit-post-button"
-                      disabled={posting || !postContent.trim()}
+                      disabled={
+                        posting ||
+                        (!postContent.trim() &&
+                          !uploadedImageUrl &&
+                          !selectedImage)
+                      }
                     >
                       {posting ? "Saving..." : "Save Changes"}
                     </button>
@@ -610,13 +1403,12 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             </div>
           ) : postStatus?.canPost ? (
             <div className="create-post-section">
-              <h3 className="create-post-title">Add Your Post</h3>
-              <p className="create-post-subtitle">
-                Share your thoughts as {userEmail || "a waitlist member"}
-              </p>
-              <form onSubmit={handleSubmitPost} className="post-form">
+              <form
+                onSubmit={handleSubmitPost}
+                className="post-form create-post-form"
+              >
                 <textarea
-                  className="post-textarea"
+                  className="post-textarea create-textarea"
                   value={postContent}
                   onChange={(e) => {
                     setPostContent(e.target.value);
@@ -626,11 +1418,55 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                       setDetectedWords([]);
                     }
                   }}
-                  placeholder="Share your thoughts about your favorite hero..."
-                  rows={4}
-                  required
+                  placeholder="What's new..?"
+                  rows={6}
                   disabled={posting}
                 />
+                {/* Image Upload Section */}
+                <div className="image-upload-section">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    disabled={posting || uploadingImage}
+                    className="image-upload-input"
+                  />
+                  <button
+                    type="button"
+                    className="attach-images-button"
+                    onClick={handleImageButtonClick}
+                    disabled={posting || uploadingImage}
+                  >
+                    <span className="attach-icon">🖼️</span>
+                    <span className="attach-text">Attach Images (max 1)</span>
+                  </button>
+                  {(imagePreview || uploadedImageUrl) && (
+                    <div className="image-preview-container">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imagePreview || uploadedImageUrl || ""}
+                        alt="Preview"
+                        className="image-preview"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="remove-image-button"
+                        disabled={posting || uploadingImage}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                  {imageModerationWarning && (
+                    <div className="moderation-warning">
+                      <p className="moderation-warning-message">
+                        ⚠️ {imageModerationWarning}
+                      </p>
+                    </div>
+                  )}
+                </div>
                 {moderationWarning && (
                   <div className="moderation-warning">
                     <p className="moderation-warning-message">
@@ -645,8 +1481,11 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                 )}
                 <button
                   type="submit"
-                  className="submit-post-button"
-                  disabled={posting || !postContent.trim()}
+                  className="post-submit-button"
+                  disabled={
+                    posting ||
+                    (!postContent.trim() && !uploadedImageUrl && !selectedImage)
+                  }
                 >
                   {posting ? "Posting..." : "Post"}
                 </button>

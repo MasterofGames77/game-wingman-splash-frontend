@@ -84,6 +84,32 @@ export interface PostStatusResponse {
     message?: string;
 }
 
+// Image Upload Types
+export interface UploadImageResponse {
+    success: boolean;
+    imageUrl?: string; // Legacy support
+    imagePublicId?: string; // Legacy support
+    image?: {
+        url: string;
+        publicId: string;
+        name?: string;
+        size?: number;
+        type?: string;
+    };
+    // New format: images array (matches main app and new backend)
+    images?: Array<{
+        url: string;
+        name: string;
+        size?: number;
+        type?: string;
+        publicId?: string;
+    }>;
+    count?: number; // Number of images uploaded
+    message?: string;
+    moderationWarning?: boolean;
+    detectedContent?: string[];
+}
+
 export interface CreatePostResponse {
     success: boolean;
     message: string;
