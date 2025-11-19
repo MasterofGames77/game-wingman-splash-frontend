@@ -1422,8 +1422,8 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                   rows={6}
                   disabled={posting}
                 />
-                {/* Image Upload Section */}
-                <div className="image-upload-section">
+                {/* Image Upload Section - Inline layout (matching main app) */}
+                <div className="image-upload-section-inline">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1439,15 +1439,19 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                     disabled={posting || uploadingImage}
                   >
                     <span className="attach-icon">🖼️</span>
-                    <span className="attach-text">Attach Images (max 1)</span>
+                    <span className="attach-text">
+                      {uploadingImage
+                        ? "Uploading..."
+                        : "Add Screenshot (max 1)"}
+                    </span>
                   </button>
                   {(imagePreview || uploadedImageUrl) && (
-                    <div className="image-preview-container">
+                    <div className="image-preview-inline">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={imagePreview || uploadedImageUrl || ""}
                         alt="Preview"
-                        className="image-preview"
+                        className="image-preview-small"
                       />
                       <button
                         type="button"

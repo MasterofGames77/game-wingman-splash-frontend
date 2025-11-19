@@ -684,8 +684,18 @@ a:hover {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  width: 100%;
-  justify-content: flex-start;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.attach-images-button:hover:not(:disabled) {
+  background-color: rgba(60, 70, 90, 0.9);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.attach-images-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .change-image-button {
@@ -718,8 +728,8 @@ a:hover {
 }
 
 .image-preview-small {
-  width: 120px;
-  height: 120px;
+  width: 150px;
+  height: 150px;
   object-fit: cover;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.2);
