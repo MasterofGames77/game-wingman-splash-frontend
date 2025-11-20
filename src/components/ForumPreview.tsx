@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import {
   ForumPreviewProps,
@@ -30,7 +30,7 @@ const getAttachmentUrl = (attachment: Attachment): string => {
 };
 
 const ForumPreview: React.FC<ForumPreviewProps> = ({
-  initialLimit = 1,
+  initialLimit = 5,
   userId,
   userEmail,
 }) => {
@@ -40,6 +40,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Post management state
   const [postStatus, setPostStatus] = useState<PostStatusResponse | null>(null);
@@ -402,7 +403,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         if (response.data.success) {
           setForumData(response.data);
           setPosts(response.data.posts);
-          setOffset(initialLimit);
+          setOffset(response.data.posts.length);
         } else {
           setError("Failed to load forum posts");
         }
@@ -417,14 +418,14 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     fetchForumPosts();
   }, [initialLimit, userId]);
 
-  // Load more posts
-  const handleLoadMore = async () => {
-    if (!forumData || loadingMore) return;
+  // Load more posts (for infinite scroll)
+  const loadMorePosts = useCallback(async () => {
+    if (!forumData || loadingMore || !forumData.hasMore) return;
 
     setLoadingMore(true);
     try {
       const params: any = {
-        limit: 2, // Load 2 more posts
+        limit: 5, // Load 5 more posts at a time
         offset: offset,
       };
       if (userId) {
@@ -448,7 +449,45 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     } finally {
       setLoadingMore(false);
     }
-  };
+  }, [forumData, loadingMore, offset, userId]);
+
+  // Infinite scroll handler
+  useEffect(() => {
+    const handleScroll = () => {
+      // Check if we're near the bottom of the page
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+
+      // Trigger when user is within 300px of the bottom
+      const threshold = 300;
+
+      if (
+        documentHeight - (scrollTop + windowHeight) < threshold &&
+        forumData?.hasMore &&
+        !loadingMore
+      ) {
+        loadMorePosts();
+      }
+    };
+
+    // Throttle scroll events for better performance
+    let ticking = false;
+    const throttledHandleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener("scroll", throttledHandleScroll);
+    return () => {
+      window.removeEventListener("scroll", throttledHandleScroll);
+    };
+  }, [forumData?.hasMore, loadingMore, loadMorePosts]);
 
   // Refresh posts after creating/editing/deleting
   const refreshPosts = async () => {
@@ -469,7 +508,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       if (response.data.success) {
         setForumData(response.data);
         setPosts(response.data.posts);
-        setOffset(initialLimit);
+        setOffset(response.data.posts.length);
       }
     } catch (err) {
       console.error("Error refreshing posts:", err);
@@ -1132,7 +1171,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         )}
       </div>
 
-      <div className="forum-posts-container">
+      <div className="forum-posts-container" ref={scrollContainerRef}>
         {posts.map((post, index) => (
           <div key={index} className="forum-post-preview">
             <div className="post-header">
@@ -1202,14 +1241,13 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
 
       {forumData.hasMore && (
         <div className="load-more-container">
-          <button
-            className="load-more-button"
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-          >
-            {loadingMore ? "Loading..." : "Load More Posts"}
-          </button>
-          {!userId && (
+          {loadingMore && (
+            <div className="loading-more-indicator">
+              <div className="loading-spinner"></div>
+              <p className="loading-more-text">Loading more posts...</p>
+            </div>
+          )}
+          {!userId && !loadingMore && (
             <p className="load-more-cta">
               Want to add your own post?{" "}
               <span className="cta-highlight">

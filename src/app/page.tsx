@@ -227,7 +227,7 @@ const SplashPage: React.FC = () => {
       )}
 
       <ForumPreview
-        initialLimit={1}
+        initialLimit={5}
         userId={verifiedUserId}
         userEmail={verifiedEmail}
       />
