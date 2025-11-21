@@ -14,6 +14,8 @@ import {
   ModerationErrorResponse,
   Attachment,
   UploadImageResponse,
+  AvailableForumsResponse,
+  AvailableForum,
 } from "../../types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -33,6 +35,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
   initialLimit = 5,
   userId,
   userEmail,
+  forumId: propForumId,
 }) => {
   const [forumData, setForumData] = useState<ForumPostsResponse | null>(null);
   const [posts, setPosts] = useState<ForumPost[]>([]);
@@ -41,6 +44,12 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
   const [offset, setOffset] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Forum selection state
+  const [availableForums, setAvailableForums] = useState<AvailableForum[]>([]);
+  const [selectedForumId, setSelectedForumId] = useState<string | null>(null);
+  const [defaultForumId, setDefaultForumId] = useState<string | null>(null);
+  const [loadingForums, setLoadingForums] = useState(true);
 
   // Post management state
   const [postStatus, setPostStatus] = useState<PostStatusResponse | null>(null);
@@ -329,10 +338,37 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     setImageModerationWarning(null);
   };
 
-  // Check post status when userId is available
+  // Fetch available forums on mount
+  useEffect(() => {
+    const fetchAvailableForums = async () => {
+      setLoadingForums(true);
+      try {
+        const response = await axios.get<AvailableForumsResponse>(
+          `${API_BASE_URL}/api/public/forum-posts/available-forums`
+        );
+
+        if (response.data.success) {
+          setAvailableForums(response.data.forums);
+          setDefaultForumId(response.data.defaultForumId);
+
+          // Set selected forum: use propForumId if provided, otherwise use default
+          const forumToUse = propForumId || response.data.defaultForumId;
+          setSelectedForumId(forumToUse);
+        }
+      } catch (err) {
+        console.error("Error fetching available forums:", err);
+      } finally {
+        setLoadingForums(false);
+      }
+    };
+
+    fetchAvailableForums();
+  }, [propForumId]);
+
+  // Check post status when userId or selectedForumId is available
   useEffect(() => {
     const checkPostStatus = async () => {
-      if (!userId) {
+      if (!userId || !selectedForumId) {
         setPostStatus(null);
         return;
       }
@@ -341,7 +377,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       try {
         const response = await axios.get<PostStatusResponse>(
           `${API_BASE_URL}/api/public/forum-posts/check-status`,
-          { params: { userId } }
+          { params: { userId, forumId: selectedForumId } }
         );
 
         if (response.data.success) {
@@ -379,10 +415,12 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     };
 
     checkPostStatus();
-  }, [userId]);
+  }, [userId, selectedForumId]);
 
-  // Initial fetch
+  // Initial fetch - reload when forum changes
   useEffect(() => {
+    if (!selectedForumId) return; // Wait for forum to be selected
+
     const fetchForumPosts = async () => {
       setLoading(true);
       setError(null);
@@ -390,6 +428,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         const params: any = {
           limit: initialLimit,
           offset: 0,
+          forumId: selectedForumId,
         };
         if (userId) {
           params.userId = userId;
@@ -416,17 +455,19 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     };
 
     fetchForumPosts();
-  }, [initialLimit, userId]);
+  }, [initialLimit, userId, selectedForumId]);
 
   // Load more posts (for infinite scroll)
   const loadMorePosts = useCallback(async () => {
-    if (!forumData || loadingMore || !forumData.hasMore) return;
+    if (!forumData || loadingMore || !forumData.hasMore || !selectedForumId)
+      return;
 
     setLoadingMore(true);
     try {
       const params: any = {
         limit: 5, // Load 5 more posts at a time
         offset: offset,
+        forumId: selectedForumId,
       };
       if (userId) {
         params.userId = userId;
@@ -449,7 +490,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     } finally {
       setLoadingMore(false);
     }
-  }, [forumData, loadingMore, offset, userId]);
+  }, [forumData, loadingMore, offset, userId, selectedForumId]);
 
   // Infinite scroll handler
   useEffect(() => {
@@ -491,10 +532,13 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
 
   // Refresh posts after creating/editing/deleting
   const refreshPosts = async () => {
+    if (!selectedForumId) return;
+
     try {
       const params: any = {
         limit: initialLimit,
         offset: 0,
+        forumId: selectedForumId,
       };
       if (userId) {
         params.userId = userId;
@@ -517,13 +561,13 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
 
   // Handle like/unlike post
   const handleLikePost = async (postId: string, currentlyLiked: boolean) => {
-    if (!userId || !postId) return;
+    if (!userId || !postId || !selectedForumId) return;
 
     setLikingPostId(postId);
     try {
       const response = await axios.post<LikePostResponse>(
         `${API_BASE_URL}/api/public/forum-posts/${postId}/like`,
-        { userId }
+        { userId, forumId: selectedForumId }
       );
 
       if (response.data.success) {
@@ -750,6 +794,11 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
           //   JSON.stringify(updateData, null, 2)
           // );
 
+          // Add forumId to update data
+          if (selectedForumId) {
+            updateData.forumId = selectedForumId;
+          }
+
           const response = await axios.put<UpdatePostResponse>(
             putUrl,
             updateData,
@@ -780,7 +829,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             // Re-check status to update state with new image
             const statusResponse = await axios.get<PostStatusResponse>(
               `${API_BASE_URL}/api/public/forum-posts/check-status`,
-              { params: { userId } }
+              { params: { userId, forumId: selectedForumId } }
             );
             // console.log("Status check response:", statusResponse.data);
 
@@ -912,6 +961,11 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             // });
           }
 
+          // Add forumId to create data
+          if (selectedForumId) {
+            createData.forumId = selectedForumId;
+          }
+
           const response = await axios.post<CreatePostResponse>(
             `${API_BASE_URL}/api/public/forum-posts`,
             createData
@@ -928,7 +982,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             // Re-check status to update state
             const statusResponse = await axios.get<PostStatusResponse>(
               `${API_BASE_URL}/api/public/forum-posts/check-status`,
-              { params: { userId } }
+              { params: { userId, forumId: selectedForumId } }
             );
             if (statusResponse.data.success) {
               setPostStatus(statusResponse.data);
@@ -1012,7 +1066,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       const response = await axios.request<DeletePostResponse>({
         method: "DELETE",
         url: `${API_BASE_URL}/api/public/forum-posts/${postStatus.postId}`,
-        data: { userId } as any,
+        data: { userId, forumId: selectedForumId } as any,
       });
 
       if (response.data.success) {
@@ -1022,7 +1076,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         // Re-check status to update state
         const statusResponse = await axios.get<PostStatusResponse>(
           `${API_BASE_URL}/api/public/forum-posts/check-status`,
-          { params: { userId } }
+          { params: { userId, forumId: selectedForumId } }
         );
         if (statusResponse.data.success) {
           setPostStatus(statusResponse.data);
@@ -1080,6 +1134,15 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       setUploadedImagePublicId(null);
     }
   };
+
+  if (loadingForums) {
+    return (
+      <div className="preview-section forum-preview">
+        <div className="loading-spinner"></div>
+        <p className="preview-loading-text">Loading forums...</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -1162,6 +1225,42 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             <span className="game-title">{forumData.forum.gameTitle}</span>
           )}
         </p>
+        {/* Forum Selector */}
+        {availableForums.length > 1 && (
+          <div className="forum-selector-container">
+            <label htmlFor="forum-select" className="forum-selector-label">
+              Select Forum:
+            </label>
+            <select
+              id="forum-select"
+              className="forum-selector"
+              value={selectedForumId || ""}
+              onChange={(e) => {
+                const newForumId = e.target.value;
+                setSelectedForumId(newForumId);
+                // Reset posts and offset when switching forums
+                setPosts([]);
+                setOffset(0);
+                setForumData(null);
+                // Reset post status to check for new forum
+                setPostStatus(null);
+                setPostContent("");
+                setIsEditing(false);
+                setUploadedImageUrl(null);
+                setUploadedImagePublicId(null);
+                setSelectedImage(null);
+                setImagePreview(null);
+              }}
+              disabled={loading || loadingForums}
+            >
+              {availableForums.map((forum) => (
+                <option key={forum.forumId} value={forum.forumId}>
+                  {forum.gameTitle} - {forum.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="forum-info">

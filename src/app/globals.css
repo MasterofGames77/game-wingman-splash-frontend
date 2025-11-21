@@ -301,6 +301,55 @@ a:hover {
   font-weight: 600;
 }
 
+.forum-selector-container {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.forum-selector-label {
+  font-size: 0.9rem;
+  color: #a7a9be;
+  font-weight: 500;
+}
+
+.forum-selector {
+  padding: 8px 16px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-family: "Poppins", Arial, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+.forum-selector:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.forum-selector:focus {
+  outline: none;
+  border-color: #e94560;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.forum-selector:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.forum-selector option {
+  background-color: #1a1a2e;
+  color: #ffffff;
+}
+
 .forum-info {
   text-align: center;
   margin-bottom: 20px;
@@ -525,6 +574,23 @@ a:hover {
 
   .forum-topic-title {
     font-size: 1.1rem;
+  }
+
+  .forum-selector-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .forum-selector-label {
+    font-size: 0.85rem;
+  }
+
+  .forum-selector {
+    width: 100%;
+    min-width: unset;
+    font-size: 0.85rem;
+    padding: 10px 14px;
   }
 
   .forum-post-preview {

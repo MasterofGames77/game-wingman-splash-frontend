@@ -26,6 +26,20 @@ export interface ForumPreviewProps {
     initialLimit?: number;
     userId?: string | null;
     userEmail?: string | null;
+    forumId?: string | null; // Optional forum ID, defaults to backend default
+}
+
+export interface AvailableForum {
+    forumId: string;
+    title: string;
+    gameTitle: string;
+}
+
+export interface AvailableForumsResponse {
+    success: boolean;
+    forums: AvailableForum[];
+    defaultForumId: string;
+    message?: string;
 }
 
 // Attachment can be a URL string or an object with url property
