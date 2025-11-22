@@ -155,7 +155,10 @@ const SplashPage: React.FC = () => {
         priority // Adding priority for LCP optimization
         style={{ maxWidth: "100%", height: "auto" }}
       />
-      <h1>Stop getting stuck. Start mastering every game instantly.</h1>
+      <h1 style={{ textAlign: "center" }}>Stop getting stuck.</h1>
+      <h1 style={{ textAlign: "center" }}>
+        Start mastering every game instantly.
+      </h1>
       <p className="subline">
         Your AI Co-Pilot delivers real-time tips, secrets, and pro-level
         insights while you play.
@@ -203,24 +206,29 @@ const SplashPage: React.FC = () => {
             )}
         </div>
       )}
-      {formState.link && (
-        <p>
-          You have been approved! Access Video Game Wingman{" "}
+      {(formState.link || verifiedUserId) && (
+        <div className="assistant-access-message">
+          <p className="assistant-access-text">
+            {formState.link ? "You have been approved!" : "You have access!"}{" "}
+            Access Video Game Wingman:
+          </p>
           <a
-            href={`${formState.link}${
-              formState.userId
+            href={`${
+              formState.link || "https://assistant.videogamewingman.com/"
+            }${
+              formState.userId || verifiedUserId
                 ? `?earlyAccess=true&userId=${encodeURIComponent(
-                    formState.userId
+                    formState.userId || verifiedUserId || ""
                   )}`
                 : ""
             }`}
             target="_blank"
             rel="noopener noreferrer"
+            className="assistant-link-button"
           >
-            here
+            Go to Assistant →
           </a>
-          .
-        </p>
+        </div>
       )}
       {formState.position !== null && (
         <p>Your waitlist position: {formState.position}</p>

@@ -1,6 +1,17 @@
 /* Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
 body {
   margin: 0;
+  padding: 20px;
   font-family: "Poppins", Arial, sans-serif;
   background-color: #1a1a2e;
   color: #ffffff;
@@ -11,6 +22,8 @@ body {
   text-align: center;
   padding: 20px;
   overflow: auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Loading Spinner */
@@ -36,6 +49,7 @@ body {
 /* Container */
 .home-container {
   max-width: 700px;
+  width: 100%;
   padding: 20px;
   text-align: center;
   display: flex;
@@ -43,24 +57,30 @@ body {
   align-items: center;
   box-sizing: border-box;
   min-height: 100vh;
+  margin: 0 auto;
 }
 
 /* Logo */
 .home-container img {
   max-width: 50%;
   height: auto;
-  margin-top: 0;
-  margin-bottom: 16px;
+  margin: 0 auto 16px auto;
+  display: block;
 }
 
 /* Headings */
 h1 {
   font-size: 2rem;
   font-weight: 700;
-  margin: 0 0 12px 0;
+  margin: 0 auto 12px auto;
   line-height: 1.2;
   max-width: 800px;
-  white-space: nowrap;
+  /* white-space: nowrap; */
+  width: 100%;
+  text-align: left;
+  box-sizing: border-box;
+  padding: 0;
+  display: block;
 }
 
 h2 {
@@ -72,27 +92,34 @@ h2 {
 .subline {
   font-size: 1rem;
   color: #a7a9be;
-  margin: 0 0 24px 0;
+  margin: 0 auto 24px auto;
   line-height: 1.4;
   max-width: 900px;
   white-space: nowrap;
+  width: 100%;
+  text-align: left;
+  box-sizing: border-box;
+  padding: 0;
 }
 
 .early-access-note {
   font-size: 0.85rem;
   color: #a7a9be;
-  margin-top: 12px;
+  margin: 12px auto 0 auto;
   line-height: 1.3;
   opacity: 0.8;
+  text-align: center;
+  width: 100%;
 }
 
 .forum-preview-note {
   font-size: 0.9rem;
   color: #a7a9be;
-  margin-top: 16px;
-  margin-bottom: 8px;
+  margin: 16px auto 8px auto;
   line-height: 1.5;
   max-width: 800px;
+  width: 100%;
+  text-align: center;
 }
 
 .forum-preview-note strong {
@@ -102,8 +129,7 @@ h2 {
 
 /* Forms */
 .auth-form {
-  margin-top: 0;
-  margin-bottom: 0;
+  margin: 0 auto;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -217,6 +243,63 @@ a:hover {
   text-decoration: underline;
 }
 
+/* Assistant Link Button */
+.assistant-link-button {
+  display: inline-block;
+  padding: 14px 32px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #e94560;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+.assistant-link-button:hover {
+  background-color: #d63050;
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.assistant-link-button:active {
+  transform: translateY(0);
+}
+
+.assistant-access-message {
+  margin: 24px auto 16px auto;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.assistant-access-text {
+  margin: 0 auto 16px auto;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+  width: 100%;
+}
+
+/* Message containers */
+.home-container > div {
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.home-container p {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .home-container {
@@ -230,12 +313,15 @@ a:hover {
   h1 {
     font-size: 1.5rem;
     white-space: normal;
+    margin: 0 auto 12px auto;
+    text-align: center;
   }
 
   .subline {
     font-size: 0.9rem;
-    margin-bottom: 20px;
+    margin: 0 auto 20px auto;
     white-space: normal;
+    text-align: center;
   }
 
   .auth-form {
