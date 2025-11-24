@@ -96,9 +96,16 @@ const SplashPage: React.FC = () => {
 
         const userId = response.data.userId || null;
 
+        // Append email confirmation message if email was sent
+        let displayMessage = response.data.message;
+        if (response.data.emailSent) {
+          displayMessage +=
+            "\n\n📧 Check your email for a confirmation with your waitlist position!";
+        }
+
         setFormState((prev) => ({
           ...prev,
-          message: response.data.message,
+          message: displayMessage,
           link: response.data.link || null,
           position: response.data.position ?? null,
           userId: userId,
@@ -190,20 +197,7 @@ const SplashPage: React.FC = () => {
       )}
       {formState.message && (
         <div>
-          <p>{formState.message}</p>
-          {formState.message !== "An error occurred. Please try again." &&
-            !wasAlreadyOnWaitlist && (
-              <p
-                style={{
-                  marginTop: "8px",
-                  color: "#a7a9be",
-                  fontSize: "0.9rem",
-                }}
-              >
-                We&apos;ve sent you a confirmation email with your waitlist
-                position!
-              </p>
-            )}
+          <p style={{ whiteSpace: "pre-line" }}>{formState.message}</p>
         </div>
       )}
       {(formState.link || verifiedUserId) && (

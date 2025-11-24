@@ -3,6 +3,7 @@ export interface SignUpResponse {
     link?: string; // Link is optional, only provided if the user is approved
     position?: number; // Track user's position
     userId?: string; // User ID for early access authentication
+    emailSent?: boolean; // Whether the confirmation email was sent successfully
 }
   
 export interface FormState {
