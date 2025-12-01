@@ -6,6 +6,7 @@ import Image from "next/image";
 import "./globals.css";
 import { FormState, SignUpResponse, VerifyUserResponse } from "../../types";
 import ForumPreview from "../components/ForumPreview";
+import LinkedInPosts from "../components/LinkedInPosts";
 
 const initialFormState: FormState = {
   email: "",
@@ -228,11 +229,18 @@ const SplashPage: React.FC = () => {
         <p>Your waitlist position: {formState.position}</p>
       )}
 
-      <ForumPreview
-        initialLimit={5}
-        userId={verifiedUserId}
-        userEmail={verifiedEmail}
-      />
+      <div className="posts-container">
+        <div className="posts-column linkedin-column">
+          <LinkedInPosts />
+        </div>
+        <div className="posts-column forum-column">
+          <ForumPreview
+            initialLimit={5}
+            userId={verifiedUserId}
+            userEmail={verifiedEmail}
+          />
+        </div>
+      </div>
     </div>
   );
 };

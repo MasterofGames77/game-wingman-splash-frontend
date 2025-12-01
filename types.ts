@@ -157,3 +157,70 @@ export interface ModerationErrorResponse {
     detectedWords?: string[];
     moderationWarning: true;
 }
+
+// LinkedIn Posts Types
+export interface LinkedInPost {
+    id: number;
+    title: string;
+    content: string;
+    linkedInUrl: string;
+    game?: string;
+    gameTitle?: string;
+    imageUrl?: string;
+    publishedDate: string;
+    hashtags?: string[];
+    metadata?: {
+        seriesDay?: number;
+        featuredStats?: Array<{
+            label: string;
+            value: string;
+            icon?: string;
+        }>;
+    };
+}
+
+export interface LinkedInSeries {
+    seriesId: string;
+    seriesTitle: string;
+    seriesDescription?: string;
+    hasIntroPost?: boolean;
+    postCount?: number;
+}
+
+export interface LinkedInSeriesResponse {
+    success: boolean;
+    series: LinkedInSeries[];
+    message?: string;
+}
+
+export interface LinkedInPostsResponse {
+    success: boolean;
+    series: {
+        seriesId: string;
+        seriesTitle: string;
+    };
+    posts: LinkedInPost[];
+    count: number;
+    hasMore: boolean;
+    message?: string;
+}
+
+export interface LinkedInIntroPostResponse {
+    success: boolean;
+    series: {
+        seriesId: string;
+        seriesTitle: string;
+    };
+    post: LinkedInPost;
+    message?: string;
+}
+
+export interface LinkedInPostResponse {
+    success: boolean;
+    series: {
+        seriesId: string;
+        seriesTitle: string;
+    };
+    post: LinkedInPost;
+    message?: string;
+}
