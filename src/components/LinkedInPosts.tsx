@@ -289,29 +289,34 @@ const LinkedInPosts: React.FC<LinkedInPostsProps> = () => {
         </div>
       ) : displayPost ? (
         <div className="linkedin-post-container">
-          {/* Post Image */}
-          {displayPost.imageUrl && (
-            <div className="linkedin-post-image">
-              <Image
-                src={`${API_BASE_URL}${displayPost.imageUrl}`}
-                alt={displayPost.title}
-                width={600}
-                height={400}
-                className="linkedin-image"
-                loading="lazy"
-                unoptimized={true}
-                onError={(e) => {
-                  // Hide broken images
-                  e.currentTarget.style.display = "none";
-                }}
-                style={{
-                  width: "100%",
-                  height: "auto",
-                  maxWidth: "600px",
-                }}
-              />
-            </div>
-          )}
+           {/* Post Image */}
+           {displayPost.imageUrl && (
+             <div className="linkedin-post-image">
+               <Image
+                 src={
+                   displayPost.imageUrl.startsWith("http://") ||
+                   displayPost.imageUrl.startsWith("https://")
+                     ? displayPost.imageUrl
+                     : `${API_BASE_URL}${displayPost.imageUrl}`
+                 }
+                 alt={displayPost.title}
+                 width={600}
+                 height={400}
+                 className="linkedin-image"
+                 loading="lazy"
+                 unoptimized={true}
+                 onError={(e) => {
+                   // Hide broken images
+                   e.currentTarget.style.display = "none";
+                 }}
+                 style={{
+                   width: "100%",
+                   height: "auto",
+                   maxWidth: "600px",
+                 }}
+               />
+             </div>
+           )}
 
           {/* Post Header */}
           <div className="linkedin-post-header">
