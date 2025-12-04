@@ -51,9 +51,20 @@ const LinkedInPosts: React.FC<LinkedInPostsProps> = () => {
         } else {
           setError("No LinkedIn post series available");
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching LinkedIn series:", err);
-        setError("Unable to load LinkedIn posts");
+        // Check if offline
+        if (
+          !navigator.onLine ||
+          err.code === "ERR_NETWORK" ||
+          err.response?.status === 503
+        ) {
+          setError(
+            "You're offline. LinkedIn posts require an internet connection."
+          );
+        } else {
+          setError("Unable to load LinkedIn posts");
+        }
       } finally {
         setLoading(false);
       }
@@ -77,9 +88,17 @@ const LinkedInPosts: React.FC<LinkedInPostsProps> = () => {
           setIntroPost(response.data.post);
           setCurrentSeriesInfo(response.data.series);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching intro post:", err);
         // Intro post is optional, so don't set error
+        // But log if offline
+        if (
+          !navigator.onLine ||
+          err.code === "ERR_NETWORK" ||
+          err.response?.status === 503
+        ) {
+          console.log("Offline: Intro post unavailable");
+        }
       }
     };
 
@@ -118,9 +137,18 @@ const LinkedInPosts: React.FC<LinkedInPostsProps> = () => {
           setHasMore(false);
           // Don't reset totalPosts here, keep the last known value
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching LinkedIn posts:", err);
-        setError("Unable to load post");
+        // Check if offline
+        if (
+          !navigator.onLine ||
+          err.code === "ERR_NETWORK" ||
+          err.response?.status === 503
+        ) {
+          setError("You're offline. Posts require an internet connection.");
+        } else {
+          setError("Unable to load post");
+        }
       } finally {
         setLoadingPost(false);
       }
@@ -233,6 +261,14 @@ const LinkedInPosts: React.FC<LinkedInPostsProps> = () => {
     return (
       <div className="preview-section linkedin-posts">
         <p className="preview-error">{error}</p>
+        {!navigator.onLine && (
+          <p
+            className="preview-error"
+            style={{ fontSize: "0.9rem", marginTop: "8px", opacity: 0.8 }}
+          >
+            💡 Tip: Load posts while online to view them offline later.
+          </p>
+        )}
       </div>
     );
   }
@@ -289,34 +325,41 @@ const LinkedInPosts: React.FC<LinkedInPostsProps> = () => {
         </div>
       ) : displayPost ? (
         <div className="linkedin-post-container">
-           {/* Post Image */}
-           {displayPost.imageUrl && (
-             <div className="linkedin-post-image">
-               <Image
-                 src={
-                   displayPost.imageUrl.startsWith("http://") ||
-                   displayPost.imageUrl.startsWith("https://")
-                     ? displayPost.imageUrl
-                     : `${API_BASE_URL}${displayPost.imageUrl}`
-                 }
-                 alt={displayPost.title}
-                 width={600}
-                 height={400}
-                 className="linkedin-image"
-                 loading="lazy"
-                 unoptimized={true}
-                 onError={(e) => {
-                   // Hide broken images
-                   e.currentTarget.style.display = "none";
-                 }}
-                 style={{
-                   width: "100%",
-                   height: "auto",
-                   maxWidth: "600px",
-                 }}
-               />
-             </div>
-           )}
+          {/* Post Image */}
+          {displayPost.imageUrl && (
+            <div className="linkedin-post-image">
+              <Image
+                src={
+                  displayPost.imageUrl.startsWith("http://") ||
+                  displayPost.imageUrl.startsWith("https://")
+                    ? displayPost.imageUrl
+                    : `${API_BASE_URL}${displayPost.imageUrl}`
+                }
+                alt={displayPost.title}
+                width={600}
+                height={400}
+                className="linkedin-image"
+                loading="lazy"
+                unoptimized={true}
+                onError={(e) => {
+                  // Hide broken images (often due to offline/external URLs)
+                  e.currentTarget.style.display = "none";
+                  // Log for debugging but don't show error to user
+                  if (!navigator.onLine) {
+                    console.log(
+                      "Image failed to load (offline):",
+                      displayPost.imageUrl
+                    );
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  maxWidth: "600px",
+                }}
+              />
+            </div>
+          )}
 
           {/* Post Header */}
           <div className="linkedin-post-header">

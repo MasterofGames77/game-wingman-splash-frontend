@@ -446,9 +446,20 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         } else {
           setError("Failed to load forum posts");
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching forum posts:", err);
-        setError("Unable to load forum preview");
+        // Check if offline
+        if (
+          !navigator.onLine ||
+          err.code === "ERR_NETWORK" ||
+          err.response?.status === 503
+        ) {
+          setError(
+            "You're offline. Forum posts require an internet connection."
+          );
+        } else {
+          setError("Unable to load forum preview");
+        }
       } finally {
         setLoading(false);
       }
@@ -485,8 +496,16 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         );
         setOffset((prev) => prev + response.data.posts.length);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error loading more posts:", err);
+      // Silently fail for "load more" - user can try again when online
+      if (
+        !navigator.onLine ||
+        err.code === "ERR_NETWORK" ||
+        err.response?.status === 503
+      ) {
+        console.log("Offline: Cannot load more posts");
+      }
     } finally {
       setLoadingMore(false);
     }
@@ -1157,6 +1176,14 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     return (
       <div className="preview-section forum-preview">
         <p className="preview-error">{error || "Unable to load preview"}</p>
+        {!navigator.onLine && (
+          <p
+            className="preview-error"
+            style={{ fontSize: "0.9rem", marginTop: "8px", opacity: 0.8 }}
+          >
+            💡 Tip: Load posts while online to view them offline later.
+          </p>
+        )}
       </div>
     );
   }
