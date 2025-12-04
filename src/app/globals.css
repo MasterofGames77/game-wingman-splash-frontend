@@ -7,6 +7,7 @@ html {
   margin: 0;
   padding: 0;
   width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -21,7 +22,7 @@ body {
   min-height: 100vh;
   text-align: center;
   padding: 20px;
-  overflow: auto;
+  overflow-x: hidden;
   width: 100%;
   box-sizing: border-box;
 }
@@ -59,6 +60,7 @@ body {
   box-sizing: border-box;
   min-height: 100vh;
   margin: 0 auto;
+  overflow-x: hidden;
 }
 
 /* Logo */
@@ -97,7 +99,7 @@ h2 {
   margin: 0 auto 24px auto;
   line-height: 1.4;
   max-width: 900px;
-  white-space: nowrap;
+  white-space: normal;
   width: 100%;
   text-align: center;
   box-sizing: border-box;
@@ -278,11 +280,13 @@ a:hover {
 .assistant-access-message {
   margin: 24px auto 16px auto;
   width: 100%;
+  max-width: 100%;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   align-self: center;
+  box-sizing: border-box;
 }
 
 .assistant-access-text {
@@ -291,21 +295,27 @@ a:hover {
   font-weight: 600;
   text-align: center;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Message containers */
 .home-container > div {
   width: 100%;
+  max-width: 100%;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
+  box-sizing: border-box;
 }
 
 .home-container p {
   text-align: center;
   margin-left: auto;
   margin-right: auto;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Ensure message divs are centered */
@@ -314,12 +324,15 @@ a:hover {
   margin-left: auto;
   margin-right: auto;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
   body {
     padding: 0;
+    overflow-x: hidden;
   }
 
   .home-container {
@@ -328,6 +341,7 @@ a:hover {
     justify-content: flex-start;
     width: 100%;
     max-width: 100%;
+    overflow-x: hidden;
   }
 
   .home-container img {
@@ -370,6 +384,8 @@ a:hover {
     margin-left: auto;
     margin-right: auto;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   /* Center all direct children paragraphs */
@@ -378,6 +394,8 @@ a:hover {
     margin-left: auto;
     margin-right: auto;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   /* Center message div content */
@@ -385,6 +403,8 @@ a:hover {
     text-align: center;
     align-self: center;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .home-container > div[style] > p {
@@ -392,6 +412,17 @@ a:hover {
     margin-left: auto;
     margin-right: auto;
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Ensure all message containers are centered and constrained */
+  .home-container > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    text-align: center !important;
+    align-self: center !important;
+    box-sizing: border-box !important;
   }
 
   .auth-form {
@@ -425,14 +456,16 @@ a:hover {
 
   .assistant-access-message {
     align-self: center;
-    width: 100%;
-    max-width: 500px;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
   }
 
   .assistant-link-button {
     align-self: center;
-    width: 100%;
-    max-width: 500px;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
   }
 
   .forum-preview-note {
@@ -448,12 +481,16 @@ a:hover {
   .posts-container {
     flex-direction: column !important;
     gap: 24px;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden;
   }
 
   .posts-column {
-    width: 100%;
-    min-width: 100%;
-    max-width: 100%;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex: 1 1 auto !important;
   }
 }
 
@@ -494,11 +531,14 @@ a:hover {
 @media (max-width: 480px) {
   body {
     padding: 0;
+    overflow-x: hidden;
   }
 
   .home-container {
     padding: 12px;
     width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .home-container img {
@@ -512,6 +552,7 @@ a:hover {
     max-width: 100% !important;
     margin-left: auto !important;
     margin-right: auto !important;
+    box-sizing: border-box !important;
   }
 
   h1,
@@ -521,6 +562,7 @@ a:hover {
     text-align: center !important;
     width: 100% !important;
     max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .auth-form,
@@ -528,11 +570,13 @@ a:hover {
     width: 100% !important;
     max-width: 100% !important;
     align-self: center !important;
+    box-sizing: border-box !important;
   }
 
   .assistant-link-button {
     width: 100% !important;
     max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 }
 
@@ -542,24 +586,26 @@ a:hover {
   max-width: 100% !important;
   margin-top: 48px;
   display: flex !important;
-  flex-direction: row !important;
+  flex-direction: column !important; /* Default to column for mobile-first */
   gap: 24px;
-  align-items: flex-start; /* Allow columns to have natural height */
+  align-items: stretch; /* Stretch columns to full width on mobile */
   justify-content: flex-start;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
-/* Ensure side-by-side on desktop */
+/* Ensure side-by-side on tablets and desktop (769px and above) */
 @media (min-width: 769px) {
   .posts-container {
     flex-direction: row !important;
     display: flex !important;
+    align-items: flex-start;
   }
 }
 
 .posts-column {
   flex: 1 1 0;
-  min-width: 300px; /* Minimum width to prevent wrapping on desktop */
+  min-width: 0; /* Remove min-width to allow proper flex shrinking on mobile */
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -567,6 +613,14 @@ a:hover {
   margin-top: 0;
   padding-top: 0;
   align-self: flex-start; /* Allow natural height */
+  width: 100%; /* Full width by default */
+}
+
+/* Tablets and Desktop: restore min-width for side-by-side layout */
+@media (min-width: 769px) {
+  .posts-column {
+    min-width: 300px; /* Minimum width to prevent wrapping on tablets/desktop */
+  }
 }
 
 /* Ensure both columns start at the same vertical position */
@@ -586,15 +640,20 @@ a:hover {
   background-color: rgba(255, 255, 255, 0.03);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 /* When inside posts-container, remove max-width constraint and allow natural height */
 .posts-container .preview-section {
   max-width: 100%;
+  width: 100%;
   margin-top: 0 !important;
   align-self: flex-start; /* Allow natural height, don't stretch */
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .preview-header {
@@ -608,6 +667,9 @@ a:hover {
   font-weight: 700;
   margin: 0 0 8px 0;
   color: #ffffff;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .preview-subtitle {
@@ -615,6 +677,9 @@ a:hover {
   color: #a7a9be;
   margin: 0;
   line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .game-title {
@@ -648,6 +713,9 @@ a:hover {
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 200px;
+  max-width: 100%;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .forum-selector:hover:not(:disabled) {
@@ -683,6 +751,9 @@ a:hover {
   font-weight: 600;
   margin: 0 0 8px 0;
   color: #ffffff;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .forum-category {
@@ -708,6 +779,12 @@ a:hover {
   border-radius: 8px;
   padding: 16px;
   text-align: left;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .post-header {
@@ -738,6 +815,11 @@ a:hover {
   line-height: 1.6;
   margin-bottom: 12px;
   font-size: 0.95rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .post-attachments {
@@ -883,6 +965,20 @@ a:hover {
   .preview-section {
     margin-top: 32px;
     padding: 20px;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Ensure all text in preview sections wraps on mobile */
+  .preview-section * {
+    max-width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .preview-title {
@@ -901,6 +997,8 @@ a:hover {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .forum-selector-label {
@@ -908,10 +1006,12 @@ a:hover {
   }
 
   .forum-selector {
-    width: 100%;
-    min-width: unset;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     font-size: 0.85rem;
     padding: 10px 14px;
+    box-sizing: border-box;
   }
 
   .forum-post-preview {
@@ -1667,6 +1767,12 @@ a:hover {
   padding: 20px;
   margin-bottom: 20px;
   text-align: left;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .linkedin-post-image {
@@ -1697,6 +1803,9 @@ a:hover {
   margin: 0 0 8px 0;
   color: #ffffff;
   line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .linkedin-post-game {
@@ -1704,6 +1813,9 @@ a:hover {
   font-weight: 600;
   margin: 8px 0;
   color: #e94560;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .linkedin-post-date {
@@ -1767,6 +1879,10 @@ a:hover {
   margin: 20px 0;
   white-space: pre-wrap;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .linkedin-post-hashtags {
@@ -1926,6 +2042,18 @@ a:hover {
 @media (max-width: 768px) {
   .linkedin-post-container {
     padding: 16px;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  /* Ensure all text in LinkedIn posts wraps on mobile */
+  .linkedin-post-container * {
+    max-width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .linkedin-post-title {
