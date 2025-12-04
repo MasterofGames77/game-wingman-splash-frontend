@@ -1,9 +1,12 @@
 // Service Worker for Video Game Wingman PWA
-// Version 1.2.0
+// Version 2.0.0 - Epic 2: Offline Queue & Background Sync
 
-const CACHE_NAME = 'wingman-v1.2';
-const RUNTIME_CACHE = 'wingman-runtime-v1.2';
+const CACHE_NAME = 'wingman-v2.0';
+const RUNTIME_CACHE = 'wingman-runtime-v2.0';
 const OFFLINE_URL = '/offline.html';
+const API_BASE_URL = self.location.origin.includes('localhost') 
+  ? 'http://localhost:5000' 
+  : self.location.origin;
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
@@ -68,8 +71,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip cross-origin requests (except API calls we want to cache)
-  if (url.origin !== location.origin && !url.pathname.startsWith('/api/')) {
+  // Handle cross-origin image requests (ImageKit, etc.) - cache them
+  const isImageRequest = request.destination === 'image' || 
+                        url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) ||
+                        url.hostname.includes('imagekit.io');
+  
+  // Skip cross-origin requests (except API calls and images we want to cache)
+  if (url.origin !== location.origin && !url.pathname.startsWith('/api/') && !isImageRequest) {
     return;
   }
 
@@ -104,12 +112,51 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle static assets (CSS, JS, images) - Cache First strategy
+  // Handle images (including cross-origin ImageKit images) - Cache First strategy
+  if (isImageRequest) {
+    event.respondWith(
+      (async () => {
+        // Try cache first
+        const cachedResponse = await caches.match(request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        
+        // Try network, cache for future use
+        try {
+          const networkResponse = await fetch(request, {
+            mode: 'cors', // Allow CORS for external images
+            credentials: 'omit'
+          });
+          
+          // Cache successful image responses
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(RUNTIME_CACHE)
+              .then((cache) => {
+                cache.put(request, responseToCache).catch((err) => {
+                  console.warn('[Service Worker] Failed to cache image:', err);
+                });
+              });
+          }
+          
+          return networkResponse;
+        } catch (error) {
+          // Network failed - return fallback or 404
+          console.log('[Service Worker] Image fetch failed:', request.url);
+          return caches.match('/icons/icon-192x192.png')
+            .then((fallback) => fallback || new Response('', { status: 404 }));
+        }
+      })()
+    );
+    return;
+  }
+
+  // Handle static assets (CSS, JS, fonts) - Cache First strategy
   // This includes Next.js static assets (with query parameters)
   if (
     request.destination === 'style' ||
     request.destination === 'script' ||
-    request.destination === 'image' ||
     request.destination === 'font' ||
     url.pathname.startsWith('/_next/static/') ||
     url.pathname.startsWith('/_next/')
@@ -201,38 +248,107 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle API requests - Network First with cache fallback
+  // Handle API requests - Network First with cache fallback and stale-while-revalidate
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Clone and cache successful responses
-          if (response.status === 200) {
-            const responseToCache = response.clone();
+      (async () => {
+        // Try network first
+        try {
+          const networkResponse = await fetch(request);
+          
+          // Cache successful responses (cache all 200 responses, even with different query params)
+          if (networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
             caches.open(RUNTIME_CACHE)
               .then((cache) => {
-                cache.put(request, responseToCache);
+                // Cache with full URL (including query params)
+                cache.put(request, responseToCache).catch((err) => {
+                  console.warn('[Service Worker] Failed to cache API response:', err);
+                });
               });
           }
-          return response;
-        })
-        .catch(() => {
-          // Network failed, try cache
-          return caches.match(request)
-            .then((cachedResponse) => {
-              if (cachedResponse) {
-                return cachedResponse;
-              }
-              // Return a basic offline response
-              return new Response(
-                JSON.stringify({ error: 'Offline', message: 'No internet connection' }),
-                {
-                  status: 503,
-                  headers: { 'Content-Type': 'application/json' },
+          
+          return networkResponse;
+        } catch (error) {
+          // Network failed - try cache with multiple strategies
+          console.log('[Service Worker] Network failed, checking cache for:', request.url);
+          
+          // Strategy 1: Try exact match (with query params)
+          let cachedResponse = await caches.match(request);
+          
+          // Strategy 2: If no exact match, try matching without query params
+          if (!cachedResponse && url.pathname.startsWith('/api/')) {
+            const urlWithoutQuery = new URL(request.url);
+            urlWithoutQuery.search = '';
+            cachedResponse = await caches.match(urlWithoutQuery);
+          }
+          
+          // Strategy 3: Try matching by pathname and similar query params
+          // For example: /api/public/forum-posts?forumId=X&limit=5&offset=0
+          // might match /api/public/forum-posts?forumId=X&limit=5&offset=5
+          if (!cachedResponse && url.pathname.startsWith('/api/')) {
+            const cache = await caches.open(RUNTIME_CACHE);
+            const keys = await cache.keys();
+            
+            // Extract base path and important params
+            const basePath = url.pathname;
+            const params = new URLSearchParams(url.search);
+            const forumId = params.get('forumId');
+            const seriesId = params.get('seriesId');
+            
+            // Try to find a cached response with same path and same forumId/seriesId
+            for (const key of keys) {
+              const keyUrl = new URL(key.url);
+              if (keyUrl.pathname === basePath) {
+                const keyParams = new URLSearchParams(keyUrl.search);
+                // Match if forumId or seriesId matches (for forum/linkedin posts)
+                if (forumId && keyParams.get('forumId') === forumId) {
+                  cachedResponse = await cache.match(key);
+                  if (cachedResponse) break;
+                } else if (seriesId && keyParams.get('seriesId') === seriesId) {
+                  cachedResponse = await cache.match(key);
+                  if (cachedResponse) break;
                 }
-              );
-            });
-        })
+              }
+            }
+          }
+          
+          // Strategy 4: Try matching by pathname only (last resort)
+          if (!cachedResponse) {
+            const cache = await caches.open(RUNTIME_CACHE);
+            const keys = await cache.keys();
+            for (const key of keys) {
+              const keyUrl = new URL(key.url);
+              if (keyUrl.pathname === url.pathname) {
+                cachedResponse = await cache.match(key);
+                if (cachedResponse) {
+                  console.log('[Service Worker] Found cache by pathname:', key.url);
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (cachedResponse) {
+            console.log('[Service Worker] Serving cached response for:', request.url);
+            return cachedResponse;
+          }
+          
+          // No cache available - return offline response
+          console.log('[Service Worker] No cache available for:', request.url);
+          return new Response(
+            JSON.stringify({ 
+              error: 'Offline', 
+              message: 'No internet connection and no cached data available',
+              offline: true 
+            }),
+            {
+              status: 503,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+      })()
     );
     return;
   }
@@ -261,6 +377,46 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Background Sync event - process queued actions
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'process-queue') {
+    console.log('[Service Worker] Background sync triggered: process-queue');
+    event.waitUntil(processQueue());
+  }
+});
+
+// Process queued actions
+async function processQueue() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/pwa/queue/process`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        processAll: true,
+      }),
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log('[Service Worker] Queue processed:', result);
+      
+      // Notify all clients
+      const clients = await self.clients.matchAll();
+      clients.forEach((client) => {
+        client.postMessage({
+          type: 'QUEUE_PROCESSED',
+          processed: result.processed || 0,
+          failed: result.failed || 0,
+        });
+      });
+    }
+  } catch (error) {
+    console.error('[Service Worker] Queue processing failed:', error);
+  }
+}
+
 // Message event - handle messages from the app
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
@@ -274,5 +430,9 @@ self.addEventListener('message', (event) => {
           return cache.addAll(event.data.urls);
         })
     );
+  }
+
+  if (event.data && event.data.type === 'PROCESS_QUEUE') {
+    event.waitUntil(processQueue());
   }
 });

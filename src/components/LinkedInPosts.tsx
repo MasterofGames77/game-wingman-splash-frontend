@@ -53,15 +53,63 @@ const LinkedInPosts: React.FC<LinkedInPostsProps> = () => {
         }
       } catch (err: any) {
         console.error("Error fetching LinkedIn series:", err);
-        // Check if offline
+
+        // If offline, try to find cached series data
         if (
           !navigator.onLine ||
           err.code === "ERR_NETWORK" ||
           err.response?.status === 503
         ) {
-          setError(
-            "You're offline. LinkedIn posts require an internet connection."
-          );
+          try {
+            const RUNTIME_CACHE = "wingman-runtime-v2.0";
+            const cache = await caches.open(RUNTIME_CACHE);
+            const keys = await cache.keys();
+
+            // Try to find any cached LinkedIn posts to determine available series
+            const cachedSeriesIds = new Set<string>();
+            for (const key of keys) {
+              const keyUrl = new URL(key.url);
+              if (keyUrl.pathname === "/api/public/linkedin-posts") {
+                const params = new URLSearchParams(keyUrl.search);
+                const seriesId = params.get("seriesId");
+                if (seriesId) {
+                  cachedSeriesIds.add(seriesId);
+                }
+              }
+            }
+
+            // If we found cached series, create series list from cache
+            if (cachedSeriesIds.size > 0) {
+              // Create a basic series list from cached data
+              const cachedSeries = Array.from(cachedSeriesIds).map(
+                (seriesId) => ({
+                  seriesId,
+                  seriesTitle:
+                    seriesId.charAt(0).toUpperCase() +
+                    seriesId.slice(1).replace(/-/g, " "),
+                  postCount: 10, // Placeholder
+                })
+              );
+
+              setAvailableSeries(cachedSeries);
+              // Use first cached series as default
+              const firstCachedSeries = cachedSeries[0];
+              setSelectedSeriesId(firstCachedSeries.seriesId);
+              console.log(
+                "[LinkedInPosts] Loaded series from cache:",
+                cachedSeries.length
+              );
+            } else {
+              setError(
+                "You're offline and no cached series available. Please go online to load series."
+              );
+            }
+          } catch (cacheErr) {
+            console.error("Error loading series from cache:", cacheErr);
+            setError(
+              "You're offline. LinkedIn posts require an internet connection."
+            );
+          }
         } else {
           setError("Unable to load LinkedIn posts");
         }
@@ -123,6 +171,64 @@ const LinkedInPosts: React.FC<LinkedInPostsProps> = () => {
           }
         );
 
+        // Handle offline/cached response
+        if (response.status === 503 && (response.data as any)?.offline) {
+          // Service worker returned offline response - try direct cache check as fallback
+          try {
+            const RUNTIME_CACHE = "wingman-runtime-v2.0";
+            const cache = await caches.open(RUNTIME_CACHE);
+
+            // Try exact match first
+            const requestUrl = `${API_BASE_URL}/api/public/linkedin-posts?seriesId=${selectedSeriesId}&limit=1&offset=${currentOffset}`;
+            let cachedResponse = await cache.match(requestUrl);
+
+            // If no exact match, try matching by pathname + seriesId
+            if (!cachedResponse) {
+              const keys = await cache.keys();
+              for (const key of keys) {
+                const keyUrl = new URL(key.url);
+                if (keyUrl.pathname === "/api/public/linkedin-posts") {
+                  const params = new URLSearchParams(keyUrl.search);
+                  if (params.get("seriesId") === selectedSeriesId) {
+                    cachedResponse = await cache.match(key);
+                    if (cachedResponse) break;
+                  }
+                }
+              }
+            }
+
+            if (cachedResponse) {
+              const cachedData = await cachedResponse.json();
+              if (
+                cachedData.success &&
+                cachedData.posts &&
+                cachedData.posts.length > 0
+              ) {
+                setCurrentPost(cachedData.posts[0]);
+                setHasMore(cachedData.hasMore);
+                if (currentOffset === 0) {
+                  setTotalPosts(cachedData.count);
+                }
+                setCurrentSeriesInfo(cachedData.series);
+                setLoadingPost(false);
+                console.log(
+                  "[LinkedInPosts] Loaded from cache after 503 response"
+                );
+                return;
+              }
+            }
+          } catch (cacheErr) {
+            console.error("Error checking cache directly:", cacheErr);
+          }
+
+          // No cache available for this specific request
+          setError(
+            "You're offline and this series isn't cached. Only series you've viewed while online are available offline. Please go online to load this series."
+          );
+          setLoadingPost(false);
+          return;
+        }
+
         if (response.data.success && response.data.posts.length > 0) {
           setCurrentPost(response.data.posts[0]);
           setHasMore(response.data.hasMore);
@@ -145,7 +251,32 @@ const LinkedInPosts: React.FC<LinkedInPostsProps> = () => {
           err.code === "ERR_NETWORK" ||
           err.response?.status === 503
         ) {
-          setError("You're offline. Posts require an internet connection.");
+          // Check if we got cached data despite the error
+          if (
+            err.response?.data &&
+            !err.response.data.offline &&
+            err.response.data.success
+          ) {
+            // We might have cached data in the response
+            try {
+              const cachedData = err.response.data;
+              if (cachedData.posts && cachedData.posts.length > 0) {
+                setCurrentPost(cachedData.posts[0]);
+                setHasMore(cachedData.hasMore);
+                if (currentOffset === 0) {
+                  setTotalPosts(cachedData.count);
+                }
+                setCurrentSeriesInfo(cachedData.series);
+                setLoadingPost(false);
+                return;
+              }
+            } catch (e) {
+              // Not valid cached data
+            }
+          }
+          setError(
+            "You're offline and this series isn't cached. Only series you've viewed while online are available offline. Please go online to load this series."
+          );
         } else {
           setError("Unable to load post");
         }
@@ -158,7 +289,7 @@ const LinkedInPosts: React.FC<LinkedInPostsProps> = () => {
   }, [selectedSeriesId, currentOffset]);
 
   // Handle series selection
-  const handleSeriesChange = (seriesId: string) => {
+  const handleSeriesChange = async (seriesId: string) => {
     setSelectedSeriesId(seriesId);
     setCurrentOffset(0);
     setShowIntro(false);
@@ -295,7 +426,51 @@ const LinkedInPosts: React.FC<LinkedInPostsProps> = () => {
               id="series-select"
               className="forum-selector"
               value={selectedSeriesId || ""}
-              onChange={(e) => handleSeriesChange(e.target.value)}
+              onChange={async (e) => {
+                const newSeriesId = e.target.value;
+
+                // If offline, check if we can load this series from cache first
+                if (!navigator.onLine && newSeriesId !== selectedSeriesId) {
+                  try {
+                    const testUrl = `${API_BASE_URL}/api/public/linkedin-posts?seriesId=${newSeriesId}&limit=1&offset=0`;
+                    // Check cache using the same strategy as service worker
+                    const RUNTIME_CACHE = "wingman-runtime-v2.0";
+                    const cache = await caches.open(RUNTIME_CACHE);
+
+                    // Try exact match first
+                    let cachedResponse = await cache.match(testUrl);
+
+                    // If no exact match, try matching by pathname + seriesId
+                    if (!cachedResponse) {
+                      const keys = await cache.keys();
+                      for (const key of keys) {
+                        const keyUrl = new URL(key.url);
+                        if (keyUrl.pathname === "/api/public/linkedin-posts") {
+                          const params = new URLSearchParams(keyUrl.search);
+                          if (params.get("seriesId") === newSeriesId) {
+                            cachedResponse = await cache.match(key);
+                            if (cachedResponse) break;
+                          }
+                        }
+                      }
+                    }
+
+                    if (!cachedResponse) {
+                      // No cache available - show warning but don't change
+                      setError(
+                        `This series isn't cached offline. Please go online to load it, or select a series you've viewed while online.`
+                      );
+                      // Reset dropdown to previous value
+                      e.target.value = selectedSeriesId || "";
+                      return;
+                    }
+                  } catch (err) {
+                    // Cache check failed - allow the change and let it fail gracefully
+                  }
+                }
+
+                await handleSeriesChange(newSeriesId);
+              }}
               disabled={loadingPost}
             >
               {availableSeries.map((series) => (

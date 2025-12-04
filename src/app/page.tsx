@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
+import apiClient from "../utils/apiClient";
 import Image from "next/image";
 import "./globals.css";
 import { FormState, SignUpResponse, VerifyUserResponse } from "../../types";
@@ -45,6 +46,7 @@ const SplashPage: React.FC = () => {
       if (response.data.success && response.data.userId) {
         setVerifiedUserId(response.data.userId);
         setVerifiedEmail(response.data.email || email);
+        setWasAlreadyOnWaitlist(true);
         return true;
       }
       return false;
@@ -90,15 +92,32 @@ const SplashPage: React.FC = () => {
       setWasAlreadyOnWaitlist(wasAlreadyOnWaitlistBefore);
 
       try {
-        const response = await axios.post<SignUpResponse>(
-          `${API_BASE_URL}/api/auth/signup`,
+        const response = await apiClient.post<SignUpResponse>(
+          `/api/auth/signup`,
           { email: formState.email }
         );
 
+        // Handle queued response
+        if (response.status === 202 || (response.data as any)?.queued) {
+          setFormState((prev) => ({
+            ...prev,
+            message:
+              "Signup queued. You'll be added to the waitlist when you're back online.",
+            loading: false,
+          }));
+          return;
+        }
+
         const userId = response.data.userId || null;
 
-        // Append email confirmation message if email was sent
+        // Customize message based on whether user was already on waitlist
         let displayMessage = response.data.message;
+        if (wasAlreadyOnWaitlistBefore) {
+          displayMessage =
+            "Welcome back! You're already on the waitlist. " + displayMessage;
+        }
+
+        // Append email confirmation message if email was sent
         if (response.data.emailSent) {
           displayMessage +=
             "\n\n📧 Check your email for a confirmation with your waitlist position!";
@@ -123,6 +142,10 @@ const SplashPage: React.FC = () => {
           if (verified) {
             // User was already on waitlist
             setWasAlreadyOnWaitlist(true);
+            setFormState((prev) => ({
+              ...prev,
+              message: "Welcome back! You're already on the waitlist.",
+            }));
           }
         }
       } catch (error) {
@@ -131,6 +154,11 @@ const SplashPage: React.FC = () => {
         const verified = await verifyUser(formState.email);
         if (verified) {
           setWasAlreadyOnWaitlist(true);
+          setFormState((prev) => ({
+            ...prev,
+            message: "Welcome back! You're already on the waitlist.",
+            loading: false,
+          }));
         } else {
           setFormState((prev) => ({
             ...prev,
@@ -179,8 +207,8 @@ const SplashPage: React.FC = () => {
           placeholder="you@example.com"
           required
         />
-        <button type="submit" disabled={formState.loading}>
-          {formState.loading ? (
+        <button type="submit" disabled={formState.loading || isVerifying}>
+          {formState.loading || isVerifying ? (
             <div className="loading-spinner"></div>
           ) : (
             "Get Early Access"
@@ -195,6 +223,19 @@ const SplashPage: React.FC = () => {
           <strong>Plus:</strong> Sign up for early access to join the
           conversation and add your first post to the community below.
         </p>
+      )}
+      {isVerifying && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+          }}
+        >
+          <div className="loading-spinner"></div>
+          <p>Verifying your account...</p>
+        </div>
       )}
       {formState.message && (
         <div>

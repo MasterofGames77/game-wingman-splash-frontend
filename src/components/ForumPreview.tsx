@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
+import apiClient from "../utils/apiClient";
 import {
   ForumPreviewProps,
   ForumPostsResponse,
@@ -355,8 +356,61 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
           const forumToUse = propForumId || response.data.defaultForumId;
           setSelectedForumId(forumToUse);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching available forums:", err);
+
+        // If offline, try to find cached forum data
+        if (
+          !navigator.onLine ||
+          err.code === "ERR_NETWORK" ||
+          err.response?.status === 503
+        ) {
+          try {
+            const RUNTIME_CACHE = "wingman-runtime-v2.0";
+            const cache = await caches.open(RUNTIME_CACHE);
+            const keys = await cache.keys();
+
+            // Try to find any cached forum posts to determine available forums
+            const cachedForumIds = new Set<string>();
+            for (const key of keys) {
+              const keyUrl = new URL(key.url);
+              if (keyUrl.pathname === "/api/public/forum-posts") {
+                const params = new URLSearchParams(keyUrl.search);
+                const forumId = params.get("forumId");
+                if (forumId) {
+                  cachedForumIds.add(forumId);
+                }
+              }
+            }
+
+            // If we found cached forums, create forum list from cache
+            if (cachedForumIds.size > 0) {
+              // Create a basic forum list from cached data
+              const cachedForums = Array.from(cachedForumIds).map(
+                (forumId) => ({
+                  forumId,
+                  gameTitle: "Cached Forum", // Placeholder
+                  title: forumId,
+                  category: "general",
+                  postCount: 0,
+                })
+              );
+
+              setAvailableForums(cachedForums);
+              // Use first cached forum as default
+              const firstCachedForum = cachedForums[0];
+              setDefaultForumId(firstCachedForum.forumId);
+              const forumToUse = propForumId || firstCachedForum.forumId;
+              setSelectedForumId(forumToUse);
+              console.log(
+                "[ForumPreview] Loaded forums from cache:",
+                cachedForums.length
+              );
+            }
+          } catch (cacheErr) {
+            console.error("Error loading forums from cache:", cacheErr);
+          }
+        }
       } finally {
         setLoadingForums(false);
       }
@@ -439,6 +493,59 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
           { params }
         );
 
+        // Handle offline/cached response
+        if (response.status === 503 && (response.data as any)?.offline) {
+          // Service worker returned offline response - try direct cache check as fallback
+          try {
+            const RUNTIME_CACHE = "wingman-runtime-v2.0";
+            const cache = await caches.open(RUNTIME_CACHE);
+
+            // Try exact match first
+            const requestUrl = `${API_BASE_URL}/api/public/forum-posts?limit=${initialLimit}&offset=0&forumId=${selectedForumId}${
+              userId ? `&userId=${userId}` : ""
+            }`;
+            let cachedResponse = await cache.match(requestUrl);
+
+            // If no exact match, try matching by pathname + forumId
+            if (!cachedResponse) {
+              const keys = await cache.keys();
+              for (const key of keys) {
+                const keyUrl = new URL(key.url);
+                if (keyUrl.pathname === "/api/public/forum-posts") {
+                  const params = new URLSearchParams(keyUrl.search);
+                  if (params.get("forumId") === selectedForumId) {
+                    cachedResponse = await cache.match(key);
+                    if (cachedResponse) break;
+                  }
+                }
+              }
+            }
+
+            if (cachedResponse) {
+              const cachedData = await cachedResponse.json();
+              if (cachedData.success) {
+                setForumData(cachedData);
+                setPosts(cachedData.posts);
+                setOffset(cachedData.posts.length);
+                setLoading(false);
+                console.log(
+                  "[ForumPreview] Loaded from cache after 503 response"
+                );
+                return;
+              }
+            }
+          } catch (cacheErr) {
+            console.error("Error checking cache directly:", cacheErr);
+          }
+
+          // No cache available for this specific request
+          setError(
+            "You're offline and this forum isn't cached. Only forums you've viewed while online are available offline. Please go online to load this forum."
+          );
+          setLoading(false);
+          return;
+        }
+
         if (response.data.success) {
           setForumData(response.data);
           setPosts(response.data.posts);
@@ -454,8 +561,24 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
           err.code === "ERR_NETWORK" ||
           err.response?.status === 503
         ) {
+          // Check if we got cached data despite the error
+          if (err.response?.data && !err.response.data.offline) {
+            // We might have cached data in the response
+            try {
+              const cachedData = err.response.data;
+              if (cachedData.success) {
+                setForumData(cachedData);
+                setPosts(cachedData.posts);
+                setOffset(cachedData.posts.length);
+                setLoading(false);
+                return;
+              }
+            } catch (e) {
+              // Not valid cached data
+            }
+          }
           setError(
-            "You're offline. Forum posts require an internet connection."
+            "You're offline. Forum posts require an internet connection or cached data."
           );
         } else {
           setError("Unable to load forum preview");
@@ -489,6 +612,14 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         { params }
       );
 
+      // Handle offline/cached response
+      if (response.status === 503 && (response.data as any)?.offline) {
+        // Service worker returned offline response - no cache available
+        console.log("Offline: No cached posts available for load more");
+        setLoadingMore(false);
+        return;
+      }
+
       if (response.data.success) {
         setPosts((prev) => [...prev, ...response.data.posts]);
         setForumData((prev) =>
@@ -498,13 +629,19 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       }
     } catch (err: any) {
       console.error("Error loading more posts:", err);
-      // Silently fail for "load more" - user can try again when online
+      // Handle offline scenarios gracefully
       if (
         !navigator.onLine ||
         err.code === "ERR_NETWORK" ||
         err.response?.status === 503
       ) {
-        console.log("Offline: Cannot load more posts");
+        // Check if it's an offline response with cached data
+        if (err.response?.data?.offline) {
+          console.log("Offline: No cached posts available for load more");
+        } else {
+          console.log("Offline: Cannot load more posts");
+        }
+        // Don't show error to user - just silently fail
       }
     } finally {
       setLoadingMore(false);
@@ -568,13 +705,28 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         { params }
       );
 
+      // Handle offline/cached response
+      if (response.status === 503 && (response.data as any)?.offline) {
+        // Service worker returned offline response - can't refresh
+        console.log("Offline: Cannot refresh posts");
+        return;
+      }
+
       if (response.data.success) {
         setForumData(response.data);
         setPosts(response.data.posts);
         setOffset(response.data.posts.length);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error refreshing posts:", err);
+      // Silently fail when offline - don't show error
+      if (
+        !navigator.onLine ||
+        err.code === "ERR_NETWORK" ||
+        err.response?.status === 503
+      ) {
+        console.log("Offline: Cannot refresh posts");
+      }
     }
   };
 
@@ -584,10 +736,27 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
 
     setLikingPostId(postId);
     try {
-      const response = await axios.post<LikePostResponse>(
-        `${API_BASE_URL}/api/public/forum-posts/${postId}/like`,
+      const response = await apiClient.post<LikePostResponse>(
+        `/api/public/forum-posts/${postId}/like`,
         { userId, forumId: selectedForumId }
       );
+
+      // Handle queued response
+      if (response.status === 202 || (response.data as any)?.queued) {
+        // Request was queued - show optimistic update
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post.postId === postId
+              ? {
+                  ...post,
+                  isLiked: !currentlyLiked,
+                  likes: currentlyLiked ? post.likes - 1 : post.likes + 1,
+                }
+              : post
+          )
+        );
+        return;
+      }
 
       if (response.data.success) {
         // Update the post in the posts array
@@ -605,6 +774,28 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       }
     } catch (err: any) {
       console.error("Error liking post:", err);
+
+      // If offline and request was queued, show success message instead of error
+      if (
+        err.code === "OFFLINE_QUEUED" ||
+        err.response?.status === 202 ||
+        (err.response?.data as any)?.queued
+      ) {
+        // Request was queued - show optimistic update
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post.postId === postId
+              ? {
+                  ...post,
+                  isLiked: !currentlyLiked,
+                  likes: currentlyLiked ? post.likes - 1 : post.likes + 1,
+                }
+              : post
+          )
+        );
+        return;
+      }
+
       alert(
         err.response?.data?.message || "Failed to like post. Please try again."
       );
@@ -818,15 +1009,21 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             updateData.forumId = selectedForumId;
           }
 
-          const response = await axios.put<UpdatePostResponse>(
-            putUrl,
-            updateData,
-            {
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
+          const response = await apiClient.put<UpdatePostResponse>(
+            `/api/public/forum-posts/${postStatus.postId}`,
+            updateData
           );
+
+          // Handle queued response
+          if (response.status === 202 || (response.data as any)?.queued) {
+            setSuccessMessage(
+              "Post update queued. It will be saved when you're back online."
+            );
+            setTimeout(() => setSuccessMessage(null), 5000);
+            setIsEditing(false);
+            setPosting(false);
+            return;
+          }
 
           // console.log("Update response:", response.data);
 
@@ -985,10 +1182,25 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             createData.forumId = selectedForumId;
           }
 
-          const response = await axios.post<CreatePostResponse>(
-            `${API_BASE_URL}/api/public/forum-posts`,
+          const response = await apiClient.post<CreatePostResponse>(
+            `/api/public/forum-posts`,
             createData
           );
+
+          // Handle queued response
+          if (response.status === 202 || (response.data as any)?.queued) {
+            setPostContent("");
+            setSelectedImage(null);
+            setImagePreview(null);
+            setUploadedImageUrl(null);
+            setUploadedImagePublicId(null);
+            setSuccessMessage(
+              "Post queued. It will be published when you're back online."
+            );
+            setTimeout(() => setSuccessMessage(null), 5000);
+            setPosting(false);
+            return;
+          }
 
           if (response.data.success) {
             setPostContent("");
@@ -1082,11 +1294,24 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     setShowDeleteModal(false);
     setDeleting(true);
     try {
-      const response = await axios.request<DeletePostResponse>({
-        method: "DELETE",
-        url: `${API_BASE_URL}/api/public/forum-posts/${postStatus.postId}`,
-        data: { userId, forumId: selectedForumId } as any,
-      });
+      const response = await apiClient.delete<DeletePostResponse>(
+        `/api/public/forum-posts/${postStatus.postId}`,
+        {
+          params: { userId, forumId: selectedForumId },
+        }
+      );
+
+      // Handle queued response
+      if (response.status === 202 || (response.data as any)?.queued) {
+        setPostContent("");
+        setIsEditing(false);
+        setSuccessMessage(
+          "Post deletion queued. It will be deleted when you're back online."
+        );
+        setTimeout(() => setSuccessMessage(null), 5000);
+        setDeleting(false);
+        return;
+      }
 
       if (response.data.success) {
         setPostContent("");
@@ -1262,8 +1487,51 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
               id="forum-select"
               className="forum-selector"
               value={selectedForumId || ""}
-              onChange={(e) => {
+              onChange={async (e) => {
                 const newForumId = e.target.value;
+
+                // If offline, check if we can load this forum from cache first
+                if (!navigator.onLine && newForumId !== selectedForumId) {
+                  // Try to check cache before changing
+                  try {
+                    const testUrl = `${API_BASE_URL}/api/public/forum-posts?limit=${initialLimit}&offset=0&forumId=${newForumId}`;
+                    // Check cache using the same strategy as service worker
+                    const RUNTIME_CACHE = "wingman-runtime-v2.0";
+                    const cache = await caches.open(RUNTIME_CACHE);
+
+                    // Try exact match first
+                    let cachedResponse = await cache.match(testUrl);
+
+                    // If no exact match, try matching by pathname + forumId
+                    if (!cachedResponse) {
+                      const keys = await cache.keys();
+                      for (const key of keys) {
+                        const keyUrl = new URL(key.url);
+                        if (keyUrl.pathname === "/api/public/forum-posts") {
+                          const params = new URLSearchParams(keyUrl.search);
+                          if (params.get("forumId") === newForumId) {
+                            cachedResponse = await cache.match(key);
+                            if (cachedResponse) break;
+                          }
+                        }
+                      }
+                    }
+
+                    if (!cachedResponse) {
+                      // No cache available - show warning but don't change
+                      setErrorMessage(
+                        `This forum isn't cached offline. Please go online to load it, or select a forum you've viewed while online.`
+                      );
+                      setTimeout(() => setErrorMessage(null), 5000);
+                      // Reset dropdown to previous value
+                      e.target.value = selectedForumId || "";
+                      return;
+                    }
+                  } catch (err) {
+                    // Cache check failed - allow the change and let it fail gracefully
+                  }
+                }
+
                 setSelectedForumId(newForumId);
                 // Reset posts and offset when switching forums
                 setPosts([]);
