@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import {
+  setupQueueProcessor,
+  registerBackgroundSync,
+} from "../utils/queueProcessor";
 
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
@@ -18,6 +22,15 @@ export default function ServiceWorkerRegistration() {
             "[Service Worker] Registration successful:",
             registration.scope
           );
+
+          // Setup queue processor
+          setupQueueProcessor();
+
+          // Register background sync (optional - not all browsers support it)
+          registerBackgroundSync().catch(() => {
+            // Silently handle - background sync is optional
+            // Queue will still process on online event
+          });
 
           // Check for updates periodically
           setInterval(() => {
