@@ -15,6 +15,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // IMPORTANT: Include cookies (HTTP-only cookies) with all requests
 });
 
 // Methods that should be queued when offline

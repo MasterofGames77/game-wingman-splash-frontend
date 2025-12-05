@@ -357,13 +357,24 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
           setSelectedForumId(forumToUse);
         }
       } catch (err: any) {
-        console.error("Error fetching available forums:", err);
+        // Handle errors gracefully - 500/404 are backend issues
+        // Only log unexpected errors in development
+        if (err?.response?.status !== 500 && err?.response?.status !== 404) {
+          if (process.env.NODE_ENV === "development") {
+            console.warn(
+              "Error fetching available forums:",
+              err?.message || err
+            );
+          }
+        }
 
-        // If offline, try to find cached forum data
+        // If offline or backend error, try to find cached forum data
         if (
           !navigator.onLine ||
           err.code === "ERR_NETWORK" ||
-          err.response?.status === 503
+          err.response?.status === 503 ||
+          err.response?.status === 500 ||
+          err.response?.status === 404
         ) {
           try {
             const RUNTIME_CACHE = "wingman-runtime-v2.0";
@@ -461,8 +472,21 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             setUploadedImagePublicId(null);
           }
         }
-      } catch (err) {
-        console.error("Error checking post status:", err);
+      } catch (err: any) {
+        // Handle errors gracefully - don't show errors for expected failures
+        // 500 errors are backend issues, 404 means endpoint doesn't exist yet
+        // Only log unexpected errors in development
+        if (err?.response?.status === 500 || err?.response?.status === 404) {
+          // Backend error or endpoint not found - silently handle
+          setPostStatus(null);
+        } else if (
+          process.env.NODE_ENV === "development" &&
+          err?.code !== "ERR_NETWORK"
+        ) {
+          // Only log non-network errors in development
+          console.warn("Error checking post status:", err?.message || err);
+        }
+        // Network errors are expected when backend is down - don't log
       } finally {
         setCheckingStatus(false);
       }
@@ -554,13 +578,25 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
           setError("Failed to load forum posts");
         }
       } catch (err: any) {
-        console.error("Error fetching forum posts:", err);
-        // Check if offline
-        if (
+        // Handle errors gracefully - don't log backend errors (500/404)
+        const isBackendError =
+          err?.response?.status === 500 || err?.response?.status === 404;
+        const isNetworkError =
           !navigator.onLine ||
           err.code === "ERR_NETWORK" ||
-          err.response?.status === 503
+          err.response?.status === 503;
+
+        // Only log unexpected errors in development
+        if (
+          !isBackendError &&
+          !isNetworkError &&
+          process.env.NODE_ENV === "development"
         ) {
+          console.warn("Error fetching forum posts:", err?.message || err);
+        }
+
+        // Check if offline or network error
+        if (isNetworkError) {
           // Check if we got cached data despite the error
           if (err.response?.data && !err.response.data.offline) {
             // We might have cached data in the response
@@ -580,6 +616,9 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
           setError(
             "You're offline. Forum posts require an internet connection or cached data."
           );
+        } else if (isBackendError) {
+          // Backend error (500/404) - show user-friendly message
+          setError("Unable to load forum preview. Please try again later.");
         } else {
           setError("Unable to load forum preview");
         }
@@ -628,13 +667,25 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         setOffset((prev) => prev + response.data.posts.length);
       }
     } catch (err: any) {
-      console.error("Error loading more posts:", err);
-      // Handle offline scenarios gracefully
-      if (
+      // Handle errors gracefully - don't log backend errors (500/404)
+      const isBackendError =
+        err?.response?.status === 500 || err?.response?.status === 404;
+      const isNetworkError =
         !navigator.onLine ||
         err.code === "ERR_NETWORK" ||
-        err.response?.status === 503
+        err.response?.status === 503;
+
+      // Only log unexpected errors in development
+      if (
+        !isBackendError &&
+        !isNetworkError &&
+        process.env.NODE_ENV === "development"
       ) {
+        console.warn("Error loading more posts:", err?.message || err);
+      }
+
+      // Handle offline scenarios gracefully
+      if (isNetworkError) {
         // Check if it's an offline response with cached data
         if (err.response?.data?.offline) {
           console.log("Offline: No cached posts available for load more");
@@ -718,15 +769,28 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         setOffset(response.data.posts.length);
       }
     } catch (err: any) {
-      console.error("Error refreshing posts:", err);
-      // Silently fail when offline - don't show error
-      if (
+      // Handle errors gracefully - don't log backend errors (500/404)
+      const isBackendError =
+        err?.response?.status === 500 || err?.response?.status === 404;
+      const isNetworkError =
         !navigator.onLine ||
         err.code === "ERR_NETWORK" ||
-        err.response?.status === 503
+        err.response?.status === 503;
+
+      // Only log unexpected errors in development
+      if (
+        !isBackendError &&
+        !isNetworkError &&
+        process.env.NODE_ENV === "development"
       ) {
+        console.warn("Error refreshing posts:", err?.message || err);
+      }
+
+      // Silently fail when offline or backend error - don't show error
+      if (isNetworkError) {
         console.log("Offline: Cannot refresh posts");
       }
+      // Backend errors (500/404) are silently handled - no user notification needed
     }
   };
 

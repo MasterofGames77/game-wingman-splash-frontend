@@ -1,8 +1,6 @@
 import React from "react";
 import "./globals.css"; // Import your global CSS here
-import { AuthProvider } from "../context/authContext"; // Adjust the path as needed
-import ServiceWorkerRegistration from "../components/ServiceWorkerRegistration";
-import QueueStatus from "../components/QueueStatus";
+import Providers from "../components/Providers";
 import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
@@ -100,11 +98,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ServiceWorkerRegistration />
-        <AuthProvider>
-          {children}
-          <QueueStatus />
-        </AuthProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -249,15 +249,12 @@ const SplashPage: React.FC = () => {
             Access Video Game Wingman:
           </p>
           <a
-            href={`${
-              formState.link || "https://assistant.videogamewingman.com/"
-            }${
-              formState.userId || verifiedUserId
-                ? `?earlyAccess=true&userId=${encodeURIComponent(
-                    formState.userId || verifiedUserId || ""
-                  )}`
-                : ""
-            }`}
+            href={
+              formState.link || 
+              `https://assistant.videogamewingman.com/?earlyAccess=true&userId=${encodeURIComponent(
+                formState.userId || verifiedUserId || ""
+              )}`
+            }
             target="_blank"
             rel="noopener noreferrer"
             className="assistant-link-button"
