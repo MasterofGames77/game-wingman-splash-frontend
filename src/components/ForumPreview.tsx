@@ -1612,18 +1612,29 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
               }}
               disabled={loading || loadingForums}
             >
-              {availableForums.map((forum) => (
-                <option key={forum.forumId} value={forum.forumId}>
-                  {forum.gameTitle} - {forum.title}
-                </option>
-              ))}
+              {availableForums.map((forum) => {
+                // Prioritize displayTitle (explicit field from backend)
+                // Fallback to title (backend now sets it correctly)
+                // Final fallback: construct from gameTitle and title
+                const displayText =
+                  forum.displayTitle ||
+                  forum.title ||
+                  `${forum.gameTitle} - ${forum.title}`;
+                return (
+                  <option key={forum.forumId} value={forum.forumId}>
+                    {displayText}
+                  </option>
+                );
+              })}
             </select>
           </div>
         )}
       </div>
 
       <div className="forum-info">
-        <h3 className="forum-topic-title">{forumData.forum.title}</h3>
+        <h3 className="forum-topic-title">
+          {forumData.forum.displayTitle || forumData.forum.title}
+        </h3>
         {forumData.forum.category && (
           <span className="forum-category">{forumData.forum.category}</span>
         )}

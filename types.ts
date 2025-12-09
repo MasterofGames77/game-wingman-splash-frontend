@@ -34,6 +34,7 @@ export interface AvailableForum {
     forumId: string;
     title: string;
     gameTitle: string;
+    displayTitle?: string; // Optional display title without redundant game name
 }
 
 export interface AvailableForumsResponse {
@@ -62,6 +63,7 @@ export interface ForumPreviewData {
     forumId: string;
     title: string;
     gameTitle: string | null;
+    displayTitle?: string; // Optional display title without redundant game name
     category: string | null;
     totalPosts: number;
 }
