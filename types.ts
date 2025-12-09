@@ -44,6 +44,26 @@ export interface AvailableForumsResponse {
     message?: string;
 }
 
+// Games list for unified feed filter
+export interface Game {
+    gameTitle: string;
+    postCount: number;
+}
+
+export interface GamesListResponse {
+    success: boolean;
+    games: Game[];
+    message?: string;
+}
+
+// Reply creation response
+export interface ReplyResponse {
+    success: boolean;
+    message: string;
+    reply?: ForumPost;
+    requiresAuth?: boolean; // If true, user needs to login/signup
+}
+
 // Attachment can be a URL string or an object with url property
 export type Attachment = string | { url: string; [key: string]: any };
 
@@ -57,6 +77,11 @@ export interface ForumPost {
     attachments?: Attachment[]; // Array of image URLs or attachment objects
     edited?: boolean; // Whether the post has been edited
     editedAt?: string | null; // Timestamp of the last edit (or null if never edited)
+    gameTitle?: string | null; // Game title for unified feed
+    forumTitle?: string | null; // Forum title for unified feed
+    forumId?: string | null; // Forum ID for unified feed
+    parentPostId?: string | null; // For replies - ID of parent post
+    replies?: ForumPost[]; // Nested replies
 }
 
 export interface ForumPreviewData {
@@ -70,7 +95,7 @@ export interface ForumPreviewData {
 
 export interface ForumPostsResponse {
     success: boolean;
-    forum: ForumPreviewData;
+    forum?: ForumPreviewData; // Optional for unified feed
     posts: ForumPost[];
     count: number;
     hasMore: boolean;

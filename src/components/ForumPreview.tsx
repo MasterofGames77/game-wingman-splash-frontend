@@ -15,8 +15,9 @@ import {
   ModerationErrorResponse,
   Attachment,
   UploadImageResponse,
-  AvailableForumsResponse,
-  AvailableForum,
+  GamesListResponse,
+  Game,
+  ReplyResponse,
 } from "../../types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -46,11 +47,15 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
   const [loadingMore, setLoadingMore] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Forum selection state
-  const [availableForums, setAvailableForums] = useState<AvailableForum[]>([]);
-  const [selectedForumId, setSelectedForumId] = useState<string | null>(null);
-  const [defaultForumId, setDefaultForumId] = useState<string | null>(null);
-  const [loadingForums, setLoadingForums] = useState(true);
+  // Game filter state
+  const [availableGames, setAvailableGames] = useState<Game[]>([]);
+  const [selectedGame, setSelectedGame] = useState<string | null>(null); // null = all games
+  const [loadingGames, setLoadingGames] = useState(true);
+
+  // Reply state
+  const [replyingToPostId, setReplyingToPostId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState<string>("");
+  const [postingReply, setPostingReply] = useState(false);
 
   // Post management state
   const [postStatus, setPostStatus] = useState<PostStatusResponse | null>(null);
@@ -58,6 +63,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
   const [postContent, setPostContent] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [likingPostId, setLikingPostId] = useState<string | null>(null);
   const [moderationWarning, setModerationWarning] = useState<string | null>(
@@ -339,22 +345,33 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     setImageModerationWarning(null);
   };
 
-  // Fetch available forums on mount
+  // Fetch available games on mount
   useEffect(() => {
-    const fetchAvailableForums = async () => {
-      setLoadingForums(true);
+    const fetchAvailableGames = async () => {
+      setLoadingGames(true);
       try {
-        const response = await axios.get<AvailableForumsResponse>(
-          `${API_BASE_URL}/api/public/forum-posts/available-forums`
+        const response = await axios.get<GamesListResponse>(
+          `${API_BASE_URL}/api/public/forum-posts/available-games`
         );
 
         if (response.data.success) {
-          setAvailableForums(response.data.forums);
-          setDefaultForumId(response.data.defaultForumId);
+          // Log backend response for debugging
+          if (process.env.NODE_ENV === "development") {
+            console.log("Available games response:", response.data);
+          }
 
-          // Set selected forum: use propForumId if provided, otherwise use default
-          const forumToUse = propForumId || response.data.defaultForumId;
-          setSelectedForumId(forumToUse);
+          // Ensure games array is safe and has required fields
+          const safeGames = (response.data.games || [])
+            .filter((game: any) => game && game.gameTitle)
+            .map((game: any) => ({
+              gameTitle: game.gameTitle || "",
+              postCount: game.postCount || 0,
+            }));
+          setAvailableGames(safeGames);
+        } else {
+          // Backend returned success: false
+          console.warn("Backend returned success: false for available games");
+          setAvailableGames([]);
         }
       } catch (err: any) {
         // Handle errors gracefully - 500/404 are backend issues
@@ -362,143 +379,27 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         if (err?.response?.status !== 500 && err?.response?.status !== 404) {
           if (process.env.NODE_ENV === "development") {
             console.warn(
-              "Error fetching available forums:",
-              err?.message || err
+              "Error fetching available games:",
+              err?.message || err,
+              "Response:",
+              err?.response?.data
             );
           }
         }
-
-        // If offline or backend error, try to find cached forum data
-        if (
-          !navigator.onLine ||
-          err.code === "ERR_NETWORK" ||
-          err.response?.status === 503 ||
-          err.response?.status === 500 ||
-          err.response?.status === 404
-        ) {
-          try {
-            const RUNTIME_CACHE = "wingman-runtime-v2.0";
-            const cache = await caches.open(RUNTIME_CACHE);
-            const keys = await cache.keys();
-
-            // Try to find any cached forum posts to determine available forums
-            const cachedForumIds = new Set<string>();
-            for (const key of keys) {
-              const keyUrl = new URL(key.url);
-              if (keyUrl.pathname === "/api/public/forum-posts") {
-                const params = new URLSearchParams(keyUrl.search);
-                const forumId = params.get("forumId");
-                if (forumId) {
-                  cachedForumIds.add(forumId);
-                }
-              }
-            }
-
-            // If we found cached forums, create forum list from cache
-            if (cachedForumIds.size > 0) {
-              // Create a basic forum list from cached data
-              const cachedForums = Array.from(cachedForumIds).map(
-                (forumId) => ({
-                  forumId,
-                  gameTitle: "Cached Forum", // Placeholder
-                  title: forumId,
-                  category: "general",
-                  postCount: 0,
-                })
-              );
-
-              setAvailableForums(cachedForums);
-              // Use first cached forum as default
-              const firstCachedForum = cachedForums[0];
-              setDefaultForumId(firstCachedForum.forumId);
-              const forumToUse = propForumId || firstCachedForum.forumId;
-              setSelectedForumId(forumToUse);
-              console.log(
-                "[ForumPreview] Loaded forums from cache:",
-                cachedForums.length
-              );
-            }
-          } catch (cacheErr) {
-            console.error("Error loading forums from cache:", cacheErr);
-          }
-        }
+        // Set empty array on error so component can still render
+        setAvailableGames([]);
       } finally {
-        setLoadingForums(false);
+        setLoadingGames(false);
       }
     };
 
-    fetchAvailableForums();
-  }, [propForumId]);
+    fetchAvailableGames();
+  }, []);
 
-  // Check post status when userId or selectedForumId is available
+  // Note: Post status check removed for unified feed - users can post without forum selection
+
+  // Initial fetch - reload when game filter changes
   useEffect(() => {
-    const checkPostStatus = async () => {
-      if (!userId || !selectedForumId) {
-        setPostStatus(null);
-        return;
-      }
-
-      setCheckingStatus(true);
-      try {
-        const response = await axios.get<PostStatusResponse>(
-          `${API_BASE_URL}/api/public/forum-posts/check-status`,
-          { params: { userId, forumId: selectedForumId } }
-        );
-
-        if (response.data.success) {
-          setPostStatus(response.data);
-          if (response.data.hasPost && response.data.post) {
-            setPostContent(response.data.post.content);
-            setIsEditing(false);
-            // Load existing image if present
-            if (
-              response.data.post.attachments &&
-              response.data.post.attachments.length > 0
-            ) {
-              const firstAttachment = response.data.post.attachments[0];
-              const imageUrl = getAttachmentUrl(firstAttachment);
-              if (imageUrl) {
-                setUploadedImageUrl(imageUrl);
-                // Note: publicId might not be in the response, but that's okay for display
-              }
-            } else {
-              setUploadedImageUrl(null);
-              setUploadedImagePublicId(null);
-            }
-          } else {
-            setPostContent("");
-            setIsEditing(false);
-            setUploadedImageUrl(null);
-            setUploadedImagePublicId(null);
-          }
-        }
-      } catch (err: any) {
-        // Handle errors gracefully - don't show errors for expected failures
-        // 500 errors are backend issues, 404 means endpoint doesn't exist yet
-        // Only log unexpected errors in development
-        if (err?.response?.status === 500 || err?.response?.status === 404) {
-          // Backend error or endpoint not found - silently handle
-          setPostStatus(null);
-        } else if (
-          process.env.NODE_ENV === "development" &&
-          err?.code !== "ERR_NETWORK"
-        ) {
-          // Only log non-network errors in development
-          console.warn("Error checking post status:", err?.message || err);
-        }
-        // Network errors are expected when backend is down - don't log
-      } finally {
-        setCheckingStatus(false);
-      }
-    };
-
-    checkPostStatus();
-  }, [userId, selectedForumId]);
-
-  // Initial fetch - reload when forum changes
-  useEffect(() => {
-    if (!selectedForumId) return; // Wait for forum to be selected
-
     const fetchForumPosts = async () => {
       setLoading(true);
       setError(null);
@@ -506,8 +407,10 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         const params: any = {
           limit: initialLimit,
           offset: 0,
-          forumId: selectedForumId,
         };
+        if (selectedGame) {
+          params.gameTitle = selectedGame;
+        }
         if (userId) {
           params.userId = userId;
         }
@@ -525,22 +428,21 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             const cache = await caches.open(RUNTIME_CACHE);
 
             // Try exact match first
-            const requestUrl = `${API_BASE_URL}/api/public/forum-posts?limit=${initialLimit}&offset=0&forumId=${selectedForumId}${
-              userId ? `&userId=${userId}` : ""
-            }`;
+            const requestUrl = `${API_BASE_URL}/api/public/forum-posts?limit=${initialLimit}&offset=0${
+              selectedGame
+                ? `&gameTitle=${encodeURIComponent(selectedGame)}`
+                : ""
+            }${userId ? `&userId=${userId}` : ""}`;
             let cachedResponse = await cache.match(requestUrl);
 
-            // If no exact match, try matching by pathname + forumId
+            // If no exact match, try matching by pathname
             if (!cachedResponse) {
               const keys = await cache.keys();
               for (const key of keys) {
                 const keyUrl = new URL(key.url);
                 if (keyUrl.pathname === "/api/public/forum-posts") {
-                  const params = new URLSearchParams(keyUrl.search);
-                  if (params.get("forumId") === selectedForumId) {
-                    cachedResponse = await cache.match(key);
-                    if (cachedResponse) break;
-                  }
+                  cachedResponse = await cache.match(key);
+                  if (cachedResponse) break;
                 }
               }
             }
@@ -548,9 +450,24 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             if (cachedResponse) {
               const cachedData = await cachedResponse.json();
               if (cachedData.success) {
+                // Ensure posts is always an array and each post has required fields
+                const safePosts = (cachedData.posts || []).map((post: any) => ({
+                  ...post,
+                  gameTitle: post?.gameTitle || null,
+                  forumTitle: post?.forumTitle || null,
+                  forumId: post?.forumId || null,
+                  parentPostId: post?.parentPostId || null,
+                  replies: (post?.replies || []).map((reply: any) => ({
+                    ...reply,
+                    gameTitle: reply?.gameTitle || null,
+                    forumTitle: reply?.forumTitle || null,
+                    forumId: reply?.forumId || null,
+                    parentPostId: reply?.parentPostId || null,
+                  })),
+                }));
                 setForumData(cachedData);
-                setPosts(cachedData.posts);
-                setOffset(cachedData.posts.length);
+                setPosts(safePosts);
+                setOffset(safePosts.length);
                 setLoading(false);
                 console.log(
                   "[ForumPreview] Loaded from cache after 503 response"
@@ -564,16 +481,40 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
 
           // No cache available for this specific request
           setError(
-            "You're offline and this forum isn't cached. Only forums you've viewed while online are available offline. Please go online to load this forum."
+            "You're offline and this feed isn't cached. Please go online to load posts."
           );
           setLoading(false);
           return;
         }
 
         if (response.data.success) {
+          // Log response structure for debugging
+          if (process.env.NODE_ENV === "development") {
+            console.log("Forum posts response:", {
+              hasPosts: !!response.data.posts,
+              postCount: response.data.posts?.length || 0,
+              firstPost: response.data.posts?.[0],
+            });
+          }
+
           setForumData(response.data);
-          setPosts(response.data.posts);
-          setOffset(response.data.posts.length);
+          // Ensure posts is always an array and each post has required fields
+          const safePosts = (response.data.posts || []).map((post: any) => ({
+            ...post,
+            gameTitle: post?.gameTitle || null,
+            forumTitle: post?.forumTitle || null,
+            forumId: post?.forumId || null,
+            parentPostId: post?.parentPostId || null,
+            replies: (post?.replies || []).map((reply: any) => ({
+              ...reply,
+              gameTitle: reply?.gameTitle || null,
+              forumTitle: reply?.forumTitle || null,
+              forumId: reply?.forumId || null,
+              parentPostId: reply?.parentPostId || null,
+            })),
+          }));
+          setPosts(safePosts);
+          setOffset(safePosts.length);
         } else {
           setError("Failed to load forum posts");
         }
@@ -603,9 +544,24 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             try {
               const cachedData = err.response.data;
               if (cachedData.success) {
+                // Ensure posts is always an array and each post has required fields
+                const safePosts = (cachedData.posts || []).map((post: any) => ({
+                  ...post,
+                  gameTitle: post?.gameTitle || null,
+                  forumTitle: post?.forumTitle || null,
+                  forumId: post?.forumId || null,
+                  parentPostId: post?.parentPostId || null,
+                  replies: (post?.replies || []).map((reply: any) => ({
+                    ...reply,
+                    gameTitle: reply?.gameTitle || null,
+                    forumTitle: reply?.forumTitle || null,
+                    forumId: reply?.forumId || null,
+                    parentPostId: reply?.parentPostId || null,
+                  })),
+                }));
                 setForumData(cachedData);
-                setPosts(cachedData.posts);
-                setOffset(cachedData.posts.length);
+                setPosts(safePosts);
+                setOffset(safePosts.length);
                 setLoading(false);
                 return;
               }
@@ -628,20 +584,21 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     };
 
     fetchForumPosts();
-  }, [initialLimit, userId, selectedForumId]);
+  }, [initialLimit, userId, selectedGame]);
 
   // Load more posts (for infinite scroll)
   const loadMorePosts = useCallback(async () => {
-    if (!forumData || loadingMore || !forumData.hasMore || !selectedForumId)
-      return;
+    if (!forumData || loadingMore || !forumData.hasMore) return;
 
     setLoadingMore(true);
     try {
       const params: any = {
         limit: 5, // Load 5 more posts at a time
         offset: offset,
-        forumId: selectedForumId,
       };
+      if (selectedGame) {
+        params.gameTitle = selectedGame;
+      }
       if (userId) {
         params.userId = userId;
       }
@@ -660,11 +617,26 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       }
 
       if (response.data.success) {
-        setPosts((prev) => [...prev, ...response.data.posts]);
+        // Ensure posts is always an array and each post has required fields
+        const newPosts = (response.data.posts || []).map((post: any) => ({
+          ...post,
+          gameTitle: post?.gameTitle || null,
+          forumTitle: post?.forumTitle || null,
+          forumId: post?.forumId || null,
+          parentPostId: post?.parentPostId || null,
+          replies: (post?.replies || []).map((reply: any) => ({
+            ...reply,
+            gameTitle: reply?.gameTitle || null,
+            forumTitle: reply?.forumTitle || null,
+            forumId: reply?.forumId || null,
+            parentPostId: reply?.parentPostId || null,
+          })),
+        }));
+        setPosts((prev) => [...prev, ...newPosts]);
         setForumData((prev) =>
           prev ? { ...prev, hasMore: response.data.hasMore } : response.data
         );
-        setOffset((prev) => prev + response.data.posts.length);
+        setOffset((prev) => prev + newPosts.length);
       }
     } catch (err: any) {
       // Handle errors gracefully - don't log backend errors (500/404)
@@ -697,7 +669,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     } finally {
       setLoadingMore(false);
     }
-  }, [forumData, loadingMore, offset, userId, selectedForumId]);
+  }, [forumData, loadingMore, offset, userId, selectedGame]);
 
   // Infinite scroll handler
   useEffect(() => {
@@ -739,14 +711,14 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
 
   // Refresh posts after creating/editing/deleting
   const refreshPosts = async () => {
-    if (!selectedForumId) return;
-
     try {
       const params: any = {
         limit: initialLimit,
         offset: 0,
-        forumId: selectedForumId,
       };
+      if (selectedGame) {
+        params.gameTitle = selectedGame;
+      }
       if (userId) {
         params.userId = userId;
       }
@@ -764,9 +736,24 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       }
 
       if (response.data.success) {
+        // Ensure posts is always an array and each post has required fields
+        const safePosts = (response.data.posts || []).map((post: any) => ({
+          ...post,
+          gameTitle: post?.gameTitle || null,
+          forumTitle: post?.forumTitle || null,
+          forumId: post?.forumId || null,
+          parentPostId: post?.parentPostId || null,
+          replies: (post?.replies || []).map((reply: any) => ({
+            ...reply,
+            gameTitle: reply?.gameTitle || null,
+            forumTitle: reply?.forumTitle || null,
+            forumId: reply?.forumId || null,
+            parentPostId: reply?.parentPostId || null,
+          })),
+        }));
         setForumData(response.data);
-        setPosts(response.data.posts);
-        setOffset(response.data.posts.length);
+        setPosts(safePosts);
+        setOffset(safePosts.length);
       }
     } catch (err: any) {
       // Handle errors gracefully - don't log backend errors (500/404)
@@ -796,13 +783,13 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
 
   // Handle like/unlike post
   const handleLikePost = async (postId: string, currentlyLiked: boolean) => {
-    if (!userId || !postId || !selectedForumId) return;
+    if (!userId || !postId) return;
 
     setLikingPostId(postId);
     try {
       const response = await apiClient.post<LikePostResponse>(
         `/api/public/forum-posts/${postId}/like`,
-        { userId, forumId: selectedForumId }
+        { userId }
       );
 
       // Handle queued response
@@ -871,7 +858,12 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
   // Create or update post
   const handleSubmitPost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) return;
+
+    // Check auth - if no userId, show login prompt
+    if (!userId) {
+      setShowAuthPrompt(true);
+      return;
+    }
 
     // Validate: must have either content or image (or both)
     const hasContent = postContent.trim().length > 0;
@@ -1068,10 +1060,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
           //   JSON.stringify(updateData, null, 2)
           // );
 
-          // Add forumId to update data
-          if (selectedForumId) {
-            updateData.forumId = selectedForumId;
-          }
+          // Note: forumId no longer needed for unified feed
 
           const response = await apiClient.put<UpdatePostResponse>(
             `/api/public/forum-posts/${postStatus.postId}`,
@@ -1105,66 +1094,6 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
 
             // Refresh posts list
             await refreshPosts();
-
-            // Re-check status to update state with new image
-            const statusResponse = await axios.get<PostStatusResponse>(
-              `${API_BASE_URL}/api/public/forum-posts/check-status`,
-              { params: { userId, forumId: selectedForumId } }
-            );
-            // console.log("Status check response:", statusResponse.data);
-
-            if (statusResponse.data.success) {
-              setPostStatus(statusResponse.data);
-              // Reload image from updated post
-              if (statusResponse.data.hasPost && statusResponse.data.post) {
-                setPostContent(statusResponse.data.post.content);
-                if (
-                  statusResponse.data.post.attachments &&
-                  statusResponse.data.post.attachments.length > 0
-                ) {
-                  const firstAttachment =
-                    statusResponse.data.post.attachments[0];
-                  const imageUrl = getAttachmentUrl(firstAttachment);
-                  // console.log("Loaded image from post:", {
-                  //   imageUrl: imageUrl,
-                  //   attachment: firstAttachment,
-                  //   attachmentType: typeof firstAttachment,
-                  // });
-                  if (imageUrl) {
-                    // Verify the image URL is valid before setting it
-                    if (
-                      imageUrl.startsWith("http://") ||
-                      imageUrl.startsWith("https://")
-                    ) {
-                      setUploadedImageUrl(imageUrl);
-                      // Extract publicId from attachment if available
-                      if (
-                        typeof firstAttachment === "object" &&
-                        "publicId" in firstAttachment
-                      ) {
-                        setUploadedImagePublicId(
-                          firstAttachment.publicId as string
-                        );
-                      }
-                    } else {
-                      console.warn(
-                        "Invalid image URL format from post:",
-                        imageUrl
-                      );
-                      setUploadedImageUrl(null);
-                      setUploadedImagePublicId(null);
-                    }
-                  } else {
-                    setUploadedImageUrl(null);
-                    setUploadedImagePublicId(null);
-                  }
-                } else {
-                  // console.log("No attachments in updated post");
-                  setUploadedImageUrl(null);
-                  setUploadedImagePublicId(null);
-                }
-              }
-            }
           } else {
             // Update failed - show error but still close edit mode
             console.error("Update failed:", response.data);
@@ -1241,10 +1170,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             // });
           }
 
-          // Add forumId to create data
-          if (selectedForumId) {
-            createData.forumId = selectedForumId;
-          }
+          // Note: forumId no longer needed for unified feed
 
           const response = await apiClient.post<CreatePostResponse>(
             `/api/public/forum-posts`,
@@ -1274,21 +1200,23 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             setUploadedImageUrl(null);
             setUploadedImagePublicId(null);
             await refreshPosts();
-            // Re-check status to update state
-            const statusResponse = await axios.get<PostStatusResponse>(
-              `${API_BASE_URL}/api/public/forum-posts/check-status`,
-              { params: { userId, forumId: selectedForumId } }
-            );
-            if (statusResponse.data.success) {
-              setPostStatus(statusResponse.data);
-              if (statusResponse.data.hasPost && statusResponse.data.post) {
-                setPostContent(statusResponse.data.post.content);
-              }
-            }
+            // Clear form after successful post
+            setPostContent("");
+            setSelectedImage(null);
+            setImagePreview(null);
+            setUploadedImageUrl(null);
+            setUploadedImagePublicId(null);
           }
         } catch (createError: any) {
           console.error("Error creating post:", createError);
           const errorData = createError.response?.data;
+
+          // Check if auth is required
+          if (createError.response?.status === 401 && errorData?.requiresAuth) {
+            setShowAuthPrompt(true);
+            return;
+          }
+
           setErrorMessage(
             errorData?.message || "Failed to create post. Please try again."
           );
@@ -1361,7 +1289,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       const response = await apiClient.delete<DeletePostResponse>(
         `/api/public/forum-posts/${postStatus.postId}`,
         {
-          params: { userId, forumId: selectedForumId },
+          params: { userId },
         }
       );
 
@@ -1381,14 +1309,6 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         setPostContent("");
         setIsEditing(false);
         await refreshPosts();
-        // Re-check status to update state
-        const statusResponse = await axios.get<PostStatusResponse>(
-          `${API_BASE_URL}/api/public/forum-posts/check-status`,
-          { params: { userId, forumId: selectedForumId } }
-        );
-        if (statusResponse.data.success) {
-          setPostStatus(statusResponse.data);
-        }
       }
     } catch (err: any) {
       console.error("Error deleting post:", err);
@@ -1443,20 +1363,76 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     }
   };
 
-  if (loadingForums) {
-    return (
-      <div className="preview-section forum-preview">
-        <div className="loading-spinner"></div>
-        <p className="preview-loading-text">Loading forums...</p>
-      </div>
-    );
-  }
+  // Handle reply submission
+  const handleSubmitReply = async (postId: string) => {
+    if (!replyContent.trim()) return;
 
-  if (loading) {
+    // Check auth
+    if (!userId) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
+    setPostingReply(true);
+    try {
+      const response = await apiClient.post<ReplyResponse>(
+        `/api/public/forum-posts/${postId}/reply`,
+        {
+          userId,
+          content: replyContent.trim(),
+        }
+      );
+
+      // Check if auth is required
+      if (response.status === 401 || response.data.requiresAuth) {
+        setShowAuthPrompt(true);
+        setPostingReply(false);
+        return;
+      }
+
+      if (response.data.success) {
+        setReplyContent("");
+        setReplyingToPostId(null);
+        await refreshPosts();
+      }
+    } catch (err: any) {
+      const errorData = err.response?.data;
+
+      // Check if auth is required
+      if (err.response?.status === 401 && errorData?.requiresAuth) {
+        setShowAuthPrompt(true);
+      } else {
+        setErrorMessage(
+          errorData?.message || "Failed to post reply. Please try again."
+        );
+        setTimeout(() => setErrorMessage(null), 5000);
+      }
+    } finally {
+      setPostingReply(false);
+    }
+  };
+
+  // Start replying to a post
+  const handleStartReply = (postId: string) => {
+    setReplyingToPostId(postId);
+    setReplyContent("");
+  };
+
+  // Cancel reply
+  const handleCancelReply = () => {
+    setReplyingToPostId(null);
+    setReplyContent("");
+  };
+
+  // Use consistent loading text constant to prevent hydration mismatch
+  const LOADING_TEXT = "Loading community preview...";
+
+  // Early returns with consistent text to prevent hydration mismatch
+  if (loadingGames || loading) {
     return (
       <div className="preview-section forum-preview">
         <div className="loading-spinner"></div>
-        <p className="preview-loading-text">Loading community preview...</p>
+        <p className="preview-loading-text">{LOADING_TEXT}</p>
       </div>
     );
   }
@@ -1465,7 +1441,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
     return (
       <div className="preview-section forum-preview">
         <p className="preview-error">{error || "Unable to load preview"}</p>
-        {!navigator.onLine && (
+        {typeof window !== "undefined" && !navigator.onLine && (
           <p
             className="preview-error"
             style={{ fontSize: "0.9rem", marginTop: "8px", opacity: 0.8 }}
@@ -1473,6 +1449,24 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
             💡 Tip: Load posts while online to view them offline later.
           </p>
         )}
+      </div>
+    );
+  }
+
+  // Ensure posts is always an array before rendering
+  if (!Array.isArray(posts)) {
+    return (
+      <div className="preview-section forum-preview">
+        <p className="preview-error">Invalid data format</p>
+      </div>
+    );
+  }
+
+  // Ensure posts is always an array before rendering
+  if (!Array.isArray(posts)) {
+    return (
+      <div className="preview-section forum-preview">
+        <p className="preview-error">Invalid data format</p>
       </div>
     );
   }
@@ -1536,179 +1530,427 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
       <div className="preview-header">
         <h2 className="preview-title">Join Our Gaming Community</h2>
         <p className="preview-subtitle">
-          See what gamers are discussing about{" "}
-          {forumData.forum.gameTitle && (
-            <span className="game-title">{forumData.forum.gameTitle}</span>
-          )}
+          See what gamers are discussing across all games
         </p>
-        {/* Forum Selector */}
-        {availableForums.length > 1 && (
+        {/* Game Filter */}
+        {Array.isArray(availableGames) && availableGames.length > 0 && (
           <div className="forum-selector-container">
-            <label htmlFor="forum-select" className="forum-selector-label">
-              Select Forum:
+            <label htmlFor="game-filter" className="forum-selector-label">
+              Filter by Game:
             </label>
             <select
-              id="forum-select"
+              id="game-filter"
               className="forum-selector"
-              value={selectedForumId || ""}
-              onChange={async (e) => {
-                const newForumId = e.target.value;
-
-                // If offline, check if we can load this forum from cache first
-                if (!navigator.onLine && newForumId !== selectedForumId) {
-                  // Try to check cache before changing
-                  try {
-                    const testUrl = `${API_BASE_URL}/api/public/forum-posts?limit=${initialLimit}&offset=0&forumId=${newForumId}`;
-                    // Check cache using the same strategy as service worker
-                    const RUNTIME_CACHE = "wingman-runtime-v2.0";
-                    const cache = await caches.open(RUNTIME_CACHE);
-
-                    // Try exact match first
-                    let cachedResponse = await cache.match(testUrl);
-
-                    // If no exact match, try matching by pathname + forumId
-                    if (!cachedResponse) {
-                      const keys = await cache.keys();
-                      for (const key of keys) {
-                        const keyUrl = new URL(key.url);
-                        if (keyUrl.pathname === "/api/public/forum-posts") {
-                          const params = new URLSearchParams(keyUrl.search);
-                          if (params.get("forumId") === newForumId) {
-                            cachedResponse = await cache.match(key);
-                            if (cachedResponse) break;
-                          }
-                        }
-                      }
-                    }
-
-                    if (!cachedResponse) {
-                      // No cache available - show warning but don't change
-                      setErrorMessage(
-                        `This forum isn't cached offline. Please go online to load it, or select a forum you've viewed while online.`
-                      );
-                      setTimeout(() => setErrorMessage(null), 5000);
-                      // Reset dropdown to previous value
-                      e.target.value = selectedForumId || "";
-                      return;
-                    }
-                  } catch (err) {
-                    // Cache check failed - allow the change and let it fail gracefully
-                  }
-                }
-
-                setSelectedForumId(newForumId);
-                // Reset posts and offset when switching forums
+              value={selectedGame || ""}
+              onChange={(e) => {
+                const newGame = e.target.value || null;
+                setSelectedGame(newGame);
+                // Reset posts and offset when switching games
                 setPosts([]);
                 setOffset(0);
                 setForumData(null);
-                // Reset post status to check for new forum
-                setPostStatus(null);
-                setPostContent("");
-                setIsEditing(false);
-                setUploadedImageUrl(null);
-                setUploadedImagePublicId(null);
-                setSelectedImage(null);
-                setImagePreview(null);
               }}
-              disabled={loading || loadingForums}
+              disabled={loading || loadingGames}
             >
-              {availableForums.map((forum) => {
-                // Prioritize displayTitle (explicit field from backend)
-                // Fallback to title (backend now sets it correctly)
-                // Final fallback: construct from gameTitle and title
-                const displayText =
-                  forum.displayTitle ||
-                  forum.title ||
-                  `${forum.gameTitle} - ${forum.title}`;
-                return (
-                  <option key={forum.forumId} value={forum.forumId}>
-                    {displayText}
-                  </option>
-                );
-              })}
+              <option value="">All Games</option>
+              {availableGames
+                .filter(
+                  (game) => game && typeof game === "object" && game?.gameTitle
+                )
+                .map((game) => {
+                  if (!game || typeof game !== "object") return null;
+                  const gameTitle = game?.gameTitle || "";
+                  const postCount = game?.postCount || 0;
+                  if (!gameTitle || typeof gameTitle !== "string") return null;
+                  return (
+                    <option key={gameTitle} value={gameTitle}>
+                      {gameTitle} ({postCount} posts)
+                    </option>
+                  );
+                })
+                .filter(Boolean)}
             </select>
           </div>
         )}
       </div>
 
-      <div className="forum-info">
-        <h3 className="forum-topic-title">
-          {forumData.forum.displayTitle || forumData.forum.title}
-        </h3>
-        {forumData.forum.category && (
-          <span className="forum-category">{forumData.forum.category}</span>
+      {/* Comment Box - Above first post, visible to all */}
+      <div className="comment-box-container" style={{ marginBottom: "20px" }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmitPost(e);
+          }}
+          className="post-form create-post-form"
+        >
+          <textarea
+            className="post-textarea create-textarea"
+            value={postContent}
+            onChange={(e) => {
+              setPostContent(e.target.value);
+              if (moderationWarning) {
+                setModerationWarning(null);
+                setDetectedWords([]);
+              }
+            }}
+            placeholder="Add your comment here..."
+            rows={4}
+            disabled={posting}
+          />
+          <button
+            type="submit"
+            className="post-submit-button"
+            disabled={posting || !postContent.trim()}
+          >
+            {posting ? "Posting..." : "Send"}
+          </button>
+        </form>
+      </div>
+
+      {/* Auth Prompt Modal */}
+      {showAuthPrompt && (
+        <div className="modal-overlay" onClick={() => setShowAuthPrompt(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">Login Required</h3>
+            <p className="modal-message">
+              Please login or sign up to post comments and replies.
+            </p>
+            <div className="modal-actions">
+              <button
+                className="modal-button modal-button-confirm"
+                onClick={() => setShowAuthPrompt(false)}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="forum-posts-container" ref={scrollContainerRef}>
+        {Array.isArray(posts) && posts.length > 0 ? (
+          posts
+            .filter((post) => post && !post.parentPostId) // Only show top-level posts
+            .map((post, index) => {
+              // Strict null checks - ensure post is a valid object
+              if (!post || typeof post !== "object") return null;
+              // Safe access to all post properties with strict type checks
+              const gameTitle =
+                post && typeof post === "object" && "gameTitle" in post
+                  ? typeof post.gameTitle === "string"
+                    ? post.gameTitle
+                    : null
+                  : null;
+              const forumTitle =
+                post && typeof post === "object" && "forumTitle" in post
+                  ? typeof post.forumTitle === "string"
+                    ? post.forumTitle
+                    : null
+                  : null;
+              const forumId =
+                post && typeof post === "object" && "forumId" in post
+                  ? typeof post.forumId === "string"
+                    ? post.forumId
+                    : null
+                  : null;
+
+              // Ensure we have required fields before rendering
+              if (!post.author || !post.content || !post.timestamp) {
+                if (process.env.NODE_ENV === "development") {
+                  console.warn("Post missing required fields:", post);
+                }
+                return null;
+              }
+
+              return (
+                <div
+                  // Use index-based key to guarantee uniqueness across pages
+                  key={`post-${index}`}
+                  className="forum-post-preview"
+                >
+                  {/* Game title badge */}
+                  {gameTitle && typeof gameTitle === "string" && (
+                    <div
+                      className="post-game-badge"
+                      style={{
+                        display: "inline-block",
+                        padding: "4px 8px",
+                        backgroundColor: "#f0f0f0",
+                        borderRadius: "4px",
+                        fontSize: "0.85rem",
+                        marginBottom: "8px",
+                        color: "#e94560",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {gameTitle}
+                    </div>
+                  )}
+                  <div className="post-header">
+                    <span className="post-author">Posted by {post.author}</span>
+                    <span className="post-date">
+                      on {formatDate(post.timestamp)}
+                      {post.edited && post.editedAt && (
+                        <span className="post-edited">
+                          {" "}
+                          (edited on {formatDate(post.editedAt)})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="post-content">{post.content}</div>
+                  {post.attachments && post.attachments.length > 0 && (
+                    <div className="post-attachments">
+                      {post.attachments.map((attachment, imgIndex) => {
+                        const imageUrl = getAttachmentUrl(attachment);
+                        if (!imageUrl) return null;
+                        return (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={imgIndex}
+                            src={imageUrl}
+                            alt={`Attachment ${imgIndex + 1}`}
+                            className="post-image"
+                            loading="lazy"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="post-footer">
+                    {userId && post.postId ? (
+                      <button
+                        className={`like-button ${post.isLiked ? "liked" : ""}`}
+                        onClick={() =>
+                          handleLikePost(post.postId!, post.isLiked || false)
+                        }
+                        disabled={likingPostId === post.postId}
+                        title={
+                          post.isLiked ? "Unlike this post" : "Like this post"
+                        }
+                      >
+                        <span className="like-icon">
+                          {post.isLiked ? "❤️" : "🤍"}
+                        </span>
+                        <span className="like-count">
+                          {likingPostId === post.postId
+                            ? "..."
+                            : `${post.likes} ${
+                                post.likes === 1 ? "Like" : "Likes"
+                              }`}
+                        </span>
+                      </button>
+                    ) : (
+                      <span className="post-likes">
+                        ❤️ {post.likes} {post.likes === 1 ? "Like" : "Likes"}
+                      </span>
+                    )}
+                    {post.postId && (
+                      <button
+                        className="reply-button"
+                        onClick={() => handleStartReply(post.postId!)}
+                        style={{
+                          marginLeft: "10px",
+                          padding: "4px 10px",
+                          backgroundColor: "rgba(233, 69, 96, 0.15)",
+                          border: "1px solid #e94560",
+                          borderRadius: "999px",
+                          cursor: "pointer",
+                          color: "#ffffff",
+                          fontSize: "0.8rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Reply
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Reply input */}
+                  {replyingToPostId === post.postId && (
+                    <div
+                      className="reply-input-container"
+                      style={{
+                        marginLeft: "20px",
+                        marginTop: "10px",
+                        padding: "10px",
+                        backgroundColor: "#f9f9f9",
+                        borderRadius: "4px",
+                        border: "1px solid #e0e0e0",
+                      }}
+                    >
+                      <textarea
+                        className="post-textarea"
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        placeholder="Write your reply..."
+                        rows={3}
+                        disabled={postingReply}
+                        style={{ width: "100%", marginBottom: "8px" }}
+                      />
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          onClick={() => handleSubmitReply(post.postId!)}
+                          disabled={postingReply || !replyContent.trim()}
+                          style={{
+                            padding: "6px 12px",
+                            backgroundColor: "#007bff",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {postingReply ? "Posting..." : "Post Reply"}
+                        </button>
+                        <button
+                          onClick={handleCancelReply}
+                          disabled={postingReply}
+                          style={{
+                            padding: "6px 12px",
+                            backgroundColor: "#ccc",
+                            color: "black",
+                            border: "none",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Nested Replies */}
+                  {post.replies && post.replies.length > 0 && (
+                    <div
+                      className="replies-container"
+                      style={{
+                        marginLeft: "20px",
+                        marginTop: "10px",
+                        paddingLeft: "15px",
+                        borderLeft: "2px solid #e0e0e0",
+                      }}
+                    >
+                      {post.replies
+                        .filter((reply) => reply) // Filter out any undefined replies
+                        .map((reply, replyIndex) => {
+                          // Safe access to reply properties
+                          if (!reply) return null;
+                          return (
+                            <div
+                              // Ensure unique key even if replyIds repeat
+                              key={`reply-${index}-${replyIndex}`}
+                              className="reply-post"
+                              style={{
+                                marginBottom: "10px",
+                                padding: "10px",
+                                backgroundColor: "#f9f9f9",
+                                borderRadius: "4px",
+                              }}
+                            >
+                              <div className="post-header">
+                                <span className="post-author">
+                                  Reply by {reply.author}
+                                </span>
+                                <span className="post-date">
+                                  on {formatDate(reply.timestamp)}
+                                  {reply.edited && reply.editedAt && (
+                                    <span className="post-edited">
+                                      {" "}
+                                      (edited on {formatDate(reply.editedAt)})
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                              <div className="post-content">
+                                {reply.content}
+                              </div>
+                              {reply.attachments &&
+                                reply.attachments.length > 0 && (
+                                  <div className="post-attachments">
+                                    {reply.attachments.map(
+                                      (attachment, imgIndex) => {
+                                        const imageUrl =
+                                          getAttachmentUrl(attachment);
+                                        if (!imageUrl) return null;
+                                        return (
+                                          // eslint-disable-next-line @next/next/no-img-element
+                                          <img
+                                            key={imgIndex}
+                                            src={imageUrl}
+                                            alt={`Attachment ${imgIndex + 1}`}
+                                            className="post-image"
+                                            loading="lazy"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display =
+                                                "none";
+                                            }}
+                                          />
+                                        );
+                                      }
+                                    )}
+                                  </div>
+                                )}
+                              <div className="post-footer">
+                                {userId && reply.postId ? (
+                                  <button
+                                    className={`like-button ${
+                                      reply.isLiked ? "liked" : ""
+                                    }`}
+                                    onClick={() =>
+                                      handleLikePost(
+                                        reply.postId!,
+                                        reply.isLiked || false
+                                      )
+                                    }
+                                    disabled={likingPostId === reply.postId}
+                                    title={
+                                      reply.isLiked
+                                        ? "Unlike this reply"
+                                        : "Like this reply"
+                                    }
+                                  >
+                                    <span className="like-icon">
+                                      {reply.isLiked ? "❤️" : "🤍"}
+                                    </span>
+                                    <span className="like-count">
+                                      {likingPostId === reply.postId
+                                        ? "..."
+                                        : `${reply.likes} ${
+                                            reply.likes === 1 ? "Like" : "Likes"
+                                          }`}
+                                    </span>
+                                  </button>
+                                ) : (
+                                  <span className="post-likes">
+                                    ❤️ {reply.likes}{" "}
+                                    {reply.likes === 1 ? "Like" : "Likes"}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+        ) : (
+          <p
+            className="preview-loading-text"
+            style={{ textAlign: "center", padding: "20px" }}
+          >
+            No posts yet. Be the first to comment!
+          </p>
         )}
       </div>
 
-      <div className="forum-posts-container" ref={scrollContainerRef}>
-        {posts.map((post, index) => (
-          <div key={index} className="forum-post-preview">
-            <div className="post-header">
-              <span className="post-author">Posted by {post.author}</span>
-              <span className="post-date">
-                on {formatDate(post.timestamp)}
-                {post.edited && post.editedAt && (
-                  <span className="post-edited">
-                    {" "}
-                    (edited on {formatDate(post.editedAt)})
-                  </span>
-                )}
-              </span>
-            </div>
-            <div className="post-content">{post.content}</div>
-            {post.attachments && post.attachments.length > 0 && (
-              <div className="post-attachments">
-                {post.attachments.map((attachment, imgIndex) => {
-                  const imageUrl = getAttachmentUrl(attachment);
-                  if (!imageUrl) return null;
-                  return (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={imgIndex}
-                      src={imageUrl}
-                      alt={`Attachment ${imgIndex + 1}`}
-                      className="post-image"
-                      loading="lazy"
-                      onError={(e) => {
-                        // Silently hide broken images - don't log as error since this is expected
-                        // when images are uploaded but not yet saved to posts, or when images are deleted
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            )}
-            <div className="post-footer">
-              {userId && post.postId ? (
-                <button
-                  className={`like-button ${post.isLiked ? "liked" : ""}`}
-                  onClick={() =>
-                    handleLikePost(post.postId!, post.isLiked || false)
-                  }
-                  disabled={likingPostId === post.postId}
-                  title={post.isLiked ? "Unlike this post" : "Like this post"}
-                >
-                  <span className="like-icon">
-                    {post.isLiked ? "❤️" : "🤍"}
-                  </span>
-                  <span className="like-count">
-                    {likingPostId === post.postId
-                      ? "..."
-                      : `${post.likes} ${post.likes === 1 ? "Like" : "Likes"}`}
-                  </span>
-                </button>
-              ) : (
-                <span className="post-likes">
-                  ❤️ {post.likes} {post.likes === 1 ? "Like" : "Likes"}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {forumData.hasMore && (
+      {forumData && forumData.hasMore && (
         <div className="load-more-container">
           {loadingMore && (
             <div className="loading-more-indicator">
@@ -1727,284 +1969,7 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         </div>
       )}
 
-      {/* Post Management Section - Only show if user is verified */}
-      {userId && (
-        <div className="post-management-section">
-          {checkingStatus ? (
-            <div className="post-management-loading">
-              <div className="loading-spinner"></div>
-              <p>Checking your post status...</p>
-            </div>
-          ) : postStatus?.hasPost ? (
-            <div className="user-post-section">
-              <h3 className="user-post-title">Your Post</h3>
-              {!isEditing ? (
-                <div className="user-post-display">
-                  <div className="post-header">
-                    <span className="post-author">
-                      Posted by {userEmail || "you"}
-                    </span>
-                    <span className="post-date">
-                      on{" "}
-                      {postStatus.post?.timestamp
-                        ? formatDate(postStatus.post.timestamp)
-                        : "Unknown date"}
-                      {postStatus.post?.edited && postStatus.post?.editedAt && (
-                        <span className="post-edited">
-                          {" "}
-                          (edited on {formatDate(postStatus.post.editedAt)})
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="user-post-content">
-                    {postStatus.post?.content}
-                  </div>
-                  {postStatus.post?.attachments &&
-                    postStatus.post.attachments.length > 0 && (
-                      <div className="post-attachments">
-                        {postStatus.post.attachments.map(
-                          (attachment, imgIndex) => {
-                            const imageUrl = getAttachmentUrl(attachment);
-                            if (!imageUrl) return null;
-                            return (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                key={imgIndex}
-                                src={imageUrl}
-                                alt={`Attachment ${imgIndex + 1}`}
-                                className="post-image"
-                                loading="lazy"
-                                onError={(e) => {
-                                  // Silently hide broken images - don't log as error
-                                  // This is expected when images are uploaded but not yet saved to posts
-                                  e.currentTarget.style.display = "none";
-                                }}
-                              />
-                            );
-                          }
-                        )}
-                      </div>
-                    )}
-                  <div className="user-post-actions">
-                    <button
-                      className="edit-post-button"
-                      onClick={handleStartEdit}
-                      disabled={posting || deleting}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="delete-post-button"
-                      onClick={handleDeletePost}
-                      disabled={posting || deleting}
-                    >
-                      {deleting ? "Deleting..." : "Delete"}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <form
-                  onSubmit={handleSubmitPost}
-                  className="post-form edit-post-form"
-                >
-                  <textarea
-                    className="post-textarea"
-                    value={postContent}
-                    onChange={(e) => {
-                      setPostContent(e.target.value);
-                      // Clear moderation warning when user starts typing
-                      if (moderationWarning) {
-                        setModerationWarning(null);
-                        setDetectedWords([]);
-                      }
-                    }}
-                    placeholder="Share your thoughts..."
-                    rows={4}
-                    disabled={posting}
-                  />
-                  {/* Image Upload Section - Inline layout */}
-                  <div className="image-upload-section-inline">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageSelect}
-                      disabled={posting || uploadingImage}
-                      className="image-upload-input"
-                    />
-                    <button
-                      type="button"
-                      className="change-image-button"
-                      onClick={handleImageButtonClick}
-                      disabled={posting || uploadingImage}
-                    >
-                      {uploadingImage
-                        ? "Uploading..."
-                        : uploadedImageUrl || selectedImage
-                        ? "Change Image"
-                        : "Upload Image"}
-                    </button>
-                    {(imagePreview || uploadedImageUrl) && (
-                      <div className="image-preview-inline">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={imagePreview || uploadedImageUrl || ""}
-                          alt="Preview"
-                          className="image-preview-small"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleRemoveImage}
-                          className="remove-image-button"
-                          disabled={posting || uploadingImage}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    )}
-                    {imageModerationWarning && (
-                      <div className="moderation-warning">
-                        <p className="moderation-warning-message">
-                          ⚠️ {imageModerationWarning}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  {moderationWarning && (
-                    <div className="moderation-warning">
-                      <p className="moderation-warning-message">
-                        ⚠️ {moderationWarning}
-                      </p>
-                      {detectedWords.length > 0 && (
-                        <p className="moderation-detected-words">
-                          Detected words: {detectedWords.join(", ")}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  <div className="post-form-actions">
-                    <button
-                      type="submit"
-                      className="submit-post-button"
-                      disabled={
-                        posting ||
-                        (!postContent.trim() &&
-                          !uploadedImageUrl &&
-                          !selectedImage)
-                      }
-                    >
-                      {posting ? "Saving..." : "Save Changes"}
-                    </button>
-                    <button
-                      type="button"
-                      className="cancel-post-button"
-                      onClick={handleCancelEdit}
-                      disabled={posting}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          ) : postStatus?.canPost ? (
-            <div className="create-post-section">
-              <form
-                onSubmit={handleSubmitPost}
-                className="post-form create-post-form"
-              >
-                <textarea
-                  className="post-textarea create-textarea"
-                  value={postContent}
-                  onChange={(e) => {
-                    setPostContent(e.target.value);
-                    // Clear moderation warning when user starts typing
-                    if (moderationWarning) {
-                      setModerationWarning(null);
-                      setDetectedWords([]);
-                    }
-                  }}
-                  placeholder="What's new..?"
-                  rows={6}
-                  disabled={posting}
-                />
-                {/* Image Upload Section - Inline layout (matching main app) */}
-                <div className="image-upload-section-inline">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    disabled={posting || uploadingImage}
-                    className="image-upload-input"
-                  />
-                  <button
-                    type="button"
-                    className="attach-images-button"
-                    onClick={handleImageButtonClick}
-                    disabled={posting || uploadingImage}
-                  >
-                    <span className="attach-icon">🖼️</span>
-                    <span className="attach-text">
-                      {uploadingImage
-                        ? "Uploading..."
-                        : "Add Screenshot (max 1)"}
-                    </span>
-                  </button>
-                  {(imagePreview || uploadedImageUrl) && (
-                    <div className="image-preview-inline">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={imagePreview || uploadedImageUrl || ""}
-                        alt="Preview"
-                        className="image-preview-small"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleRemoveImage}
-                        className="remove-image-button"
-                        disabled={posting || uploadingImage}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  )}
-                  {imageModerationWarning && (
-                    <div className="moderation-warning">
-                      <p className="moderation-warning-message">
-                        ⚠️ {imageModerationWarning}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                {moderationWarning && (
-                  <div className="moderation-warning">
-                    <p className="moderation-warning-message">
-                      ⚠️ {moderationWarning}
-                    </p>
-                    {detectedWords.length > 0 && (
-                      <p className="moderation-detected-words">
-                        Detected words: {detectedWords.join(", ")}
-                      </p>
-                    )}
-                  </div>
-                )}
-                <button
-                  type="submit"
-                  className="post-submit-button"
-                  disabled={
-                    posting ||
-                    (!postContent.trim() && !uploadedImageUrl && !selectedImage)
-                  }
-                >
-                  {posting ? "Posting..." : "Post"}
-                </button>
-              </form>
-            </div>
-          ) : null}
-        </div>
-      )}
+      {/* Note: Post management section removed - users can post via comment box above */}
 
       {!userId && (
         <div className="preview-cta">
