@@ -8,6 +8,11 @@ const nextConfig = {
         hostname: 'videogamewingman.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'ik.imagekit.io',
+        pathname: '/**',
+      },
     ],
   },
   output: 'standalone', // Useful for deploying to Docker or Vercel
