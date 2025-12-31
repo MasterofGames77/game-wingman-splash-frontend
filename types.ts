@@ -4,6 +4,8 @@ export interface SignUpResponse {
     position?: number; // Track user's position
     userId?: string; // User ID for early access authentication
     emailSent?: boolean; // Whether the confirmation email was sent successfully
+    hasProAccess?: boolean; // Whether user is eligible for 1 year of Wingman Pro (based on position and signup deadline)
+    isApproved?: boolean; // Whether user has been approved for early access
 }
   
 export interface FormState {
