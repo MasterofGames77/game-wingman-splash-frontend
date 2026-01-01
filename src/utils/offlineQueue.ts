@@ -89,6 +89,10 @@ export const queueAction = async (
   // Check if online - if so, try to send directly
   if (navigator.onLine) {
     try {
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds
+      
       // Try to send the request directly
       const response = await fetch(endpoint, {
         method,
@@ -97,7 +101,10 @@ export const queueAction = async (
           ...headers,
         },
         body: method !== 'GET' ? JSON.stringify(data) : undefined,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         // Request succeeded, no need to queue
@@ -114,9 +121,13 @@ export const queueAction = async (
           status: 'completed',
         };
       }
-    } catch (error) {
-      // Network error, will queue below
-      console.log("[Offline Queue] Network error, queuing action:", error);
+    } catch (error: any) {
+      // Network error or timeout, will queue below
+      if (error.name === 'AbortError') {
+        console.log("[Offline Queue] Request timeout, queuing action");
+      } else {
+        console.log("[Offline Queue] Network error, queuing action:", error);
+      }
     }
   }
 
@@ -153,6 +164,9 @@ export const queueAction = async (
   // Send to backend queue endpoint if online (for backend tracking)
   if (navigator.onLine) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds for queue sync
+      
       await fetch(`${API_BASE_URL}/api/pwa/queue`, {
         method: 'POST',
         headers: {
@@ -165,7 +179,10 @@ export const queueAction = async (
           data,
           userId,
         }),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
     } catch (error) {
       console.warn("[Offline Queue] Failed to sync with backend queue:", error);
       // Continue anyway - action is stored locally
@@ -196,7 +213,12 @@ export const processQueuedAction = async (action: QueuedAction): Promise<boolean
   allActions[actionIndex].status = 'processing';
   saveQueuedActions(allActions);
 
+  let timeoutId: NodeJS.Timeout | null = null;
   try {
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds
+    
     // Try to execute the action
     const response = await fetch(action.endpoint, {
       method: action.method,
@@ -205,7 +227,10 @@ export const processQueuedAction = async (action: QueuedAction): Promise<boolean
         ...action.headers,
       },
       body: action.method !== 'GET' ? JSON.stringify(action.data) : undefined,
+      signal: controller.signal,
     });
+    
+    if (timeoutId) clearTimeout(timeoutId);
 
     if (response.ok) {
       // Success - mark as completed
@@ -226,8 +251,9 @@ export const processQueuedAction = async (action: QueuedAction): Promise<boolean
       saveQueuedActions(allActions);
       return false;
     }
-  } catch (error) {
-    // Network error - reset to pending for retry
+  } catch (error: any) {
+    if (timeoutId) clearTimeout(timeoutId);
+    // Network error or timeout - reset to pending for retry
     allActions[actionIndex].retries += 1;
     if (allActions[actionIndex].retries >= 3) {
       allActions[actionIndex].status = 'failed';
@@ -260,7 +286,11 @@ export const processQueuedActions = async (): Promise<{ processed: number; faile
   console.log(`[Offline Queue] Processing ${pendingActions.length} queued actions`);
 
   // Try to process via backend first (if available)
+  let timeoutId: NodeJS.Timeout | null = null;
   try {
+    const controller = new AbortController();
+    timeoutId = setTimeout(() => controller.abort(), 25000); // 25 seconds
+    
     const response = await fetch(`${API_BASE_URL}/api/pwa/queue/process`, {
       method: 'POST',
       headers: {
@@ -269,7 +299,10 @@ export const processQueuedActions = async (): Promise<{ processed: number; faile
       body: JSON.stringify({
         processAll: true,
       }),
+      signal: controller.signal,
     });
+    
+    if (timeoutId) clearTimeout(timeoutId);
 
     if (response.ok) {
       const result = await response.json();
@@ -282,8 +315,13 @@ export const processQueuedActions = async (): Promise<{ processed: number; faile
         return { processed: result.processed || pendingActions.length, failed: 0 };
       }
     }
-  } catch (error) {
-    console.warn("[Offline Queue] Backend processing failed, processing locally:", error);
+  } catch (error: any) {
+    if (timeoutId) clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      console.warn("[Offline Queue] Backend processing timeout, processing locally");
+    } else {
+      console.warn("[Offline Queue] Backend processing failed, processing locally:", error);
+    }
   }
 
   // Process locally

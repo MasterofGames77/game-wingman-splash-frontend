@@ -16,6 +16,7 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true, // IMPORTANT: Include cookies (HTTP-only cookies) with all requests
+  timeout: 25000, // 25 seconds timeout (just under Heroku's 30s limit)
 });
 
 // Methods that should be queued when offline

@@ -40,7 +40,10 @@ const SplashPage: React.FC = () => {
     try {
       const response = await axios.get<VerifyUserResponse>(
         `${API_BASE_URL}/api/public/forum-posts/verify-user`,
-        { params: { email: email.toLowerCase().trim() } }
+        {
+          params: { email: email.toLowerCase().trim() },
+          timeout: 25000, // 25 seconds timeout (just under Heroku's 30s limit)
+        }
       );
 
       if (response.data.success && response.data.userId) {
@@ -75,7 +78,10 @@ const SplashPage: React.FC = () => {
         try {
           const checkResponse = await axios.get<VerifyUserResponse>(
             `${API_BASE_URL}/api/public/forum-posts/verify-user`,
-            { params: { email: formState.email.toLowerCase().trim() } }
+            {
+              params: { email: formState.email.toLowerCase().trim() },
+              timeout: 25000, // 25 seconds timeout (just under Heroku's 30s limit)
+            }
           );
           if (checkResponse.data.success && checkResponse.data.userId) {
             wasAlreadyOnWaitlistBefore = true;
@@ -247,7 +253,7 @@ const SplashPage: React.FC = () => {
           </p>
           <a
             href={
-              formState.link || 
+              formState.link ||
               `https://assistant.videogamewingman.com/?earlyAccess=true&userId=${encodeURIComponent(
                 formState.userId || verifiedUserId || ""
               )}`
