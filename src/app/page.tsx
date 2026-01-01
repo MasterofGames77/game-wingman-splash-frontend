@@ -215,9 +215,6 @@ const SplashPage: React.FC = () => {
           )}
         </button>
       </form>
-      <p className="early-access-note">
-        The first 5,000 gamers who sign up by December 31, 2025 get Wingman Pro free for 1 year.
-      </p>
       {!verifiedUserId && (
         <p className="forum-preview-note">
           <strong>Plus:</strong> Sign up for early access to join the
