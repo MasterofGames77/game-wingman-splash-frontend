@@ -179,6 +179,9 @@ const SplashPage: React.FC = () => {
 
   // Check if email is in URL params (for returning users)
   useEffect(() => {
+    // Only run on client side to avoid hydration mismatches
+    if (typeof window === "undefined") return;
+
     const urlParams = new URLSearchParams(window.location.search);
     const emailParam = urlParams.get("email");
     if (emailParam) {
@@ -221,6 +224,10 @@ const SplashPage: React.FC = () => {
           )}
         </button>
       </form>
+      <p className="early-access-note">
+        The first 5,000 gamers who sign up by July 31, 2026 at 11:59 PM EDT get
+        Wingman Pro free for 1 year.
+      </p>
       {!verifiedUserId && (
         <p className="forum-preview-note">
           <strong>Plus:</strong> Sign up for early access to join the
