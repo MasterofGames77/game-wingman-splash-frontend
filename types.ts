@@ -253,3 +253,45 @@ export interface LinkedInPostResponse {
     post: LinkedInPost;
     message?: string;
 }
+
+// Question Feature Types
+export interface Question {
+    id: string;
+    email: string;
+    question: string;
+    response: string; // Contains markdown with shortened URLs
+    timestamp: string;
+    detectedGame?: string; // Extracted game title
+    detectedGenre?: string[]; // Array of genre strings
+    imageUrl?: string; // For future image support
+}
+
+export interface QuestionResponse {
+    question: Question | null;
+    message: string;
+}
+
+export interface AskQuestionResponse {
+    message: string;
+    question: Question;
+}
+
+export interface AskQuestionErrorResponse {
+    message: string;
+    existingQuestion?: Question;
+    detectedWords?: string[];
+}
+
+export interface DeleteQuestionResponse {
+    message: string;
+}
+
+export interface WaitlistPositionResponse {
+    position?: number;
+    isApproved: boolean;
+    link?: string;
+    userId?: string;
+    email?: string;
+    hasProAccess?: boolean;
+    message?: string;
+}

@@ -8,6 +8,7 @@ import "./globals.css";
 import { FormState, SignUpResponse, VerifyUserResponse } from "../../types";
 import ForumPreview from "../components/ForumPreview";
 import LinkedInPosts from "../components/LinkedInPosts";
+import QuestionSection from "../components/QuestionSection";
 
 const initialFormState: FormState = {
   email: "",
@@ -25,7 +26,6 @@ const SplashPage: React.FC = () => {
   const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [wasAlreadyOnWaitlist, setWasAlreadyOnWaitlist] = useState(false);
 
   const handleEmailChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +49,6 @@ const SplashPage: React.FC = () => {
       if (response.data.success && response.data.userId) {
         setVerifiedUserId(response.data.userId);
         setVerifiedEmail(response.data.email || email);
-        setWasAlreadyOnWaitlist(true);
         return true;
       }
       return false;
@@ -94,8 +93,6 @@ const SplashPage: React.FC = () => {
           wasAlreadyOnWaitlistBefore = false;
         }
       }
-
-      setWasAlreadyOnWaitlist(wasAlreadyOnWaitlistBefore);
 
       try {
         const response = await apiClient.post<SignUpResponse>(
@@ -147,7 +144,6 @@ const SplashPage: React.FC = () => {
           const verified = await verifyUser(formState.email);
           if (verified) {
             // User was already on waitlist
-            setWasAlreadyOnWaitlist(true);
             setFormState((prev) => ({
               ...prev,
               message: "Welcome back! You're already on the waitlist.",
@@ -159,7 +155,6 @@ const SplashPage: React.FC = () => {
         // If signup fails, try to verify in case user is already on waitlist
         const verified = await verifyUser(formState.email);
         if (verified) {
-          setWasAlreadyOnWaitlist(true);
           setFormState((prev) => ({
             ...prev,
             message: "Welcome back! You're already on the waitlist.",
@@ -276,6 +271,8 @@ const SplashPage: React.FC = () => {
       {formState.position !== null && (
         <p>Your waitlist position: {formState.position}</p>
       )}
+
+      <QuestionSection userEmail={verifiedEmail || formState.email || null} />
 
       <div className="posts-container">
         <div className="posts-column linkedin-column">
