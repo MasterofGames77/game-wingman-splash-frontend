@@ -114,14 +114,65 @@ if (staticDirFound) {
   }
 }
 
-// Verify server.js exists
-const serverFile = path.join(process.cwd(), '.next', 'standalone', 'server.js');
-if (fs.existsSync(serverFile)) {
-  console.log('✓ Standalone server.js exists');
+// Find server.js - Next.js may place it in a nested directory if workspace path contains spaces
+function findServerFile(dir, depth = 0) {
+  // Limit search depth to prevent infinite recursion
+  if (depth > 5) return null;
+  
+  if (!fs.existsSync(dir)) return null;
+  
+  const serverFile = path.join(dir, 'server.js');
+  if (fs.existsSync(serverFile)) {
+    return serverFile;
+  }
+  
+  // Search subdirectories
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const found = findServerFile(path.join(dir, entry.name), depth + 1);
+        if (found) return found;
+      }
+    }
+  } catch (error) {
+    // Ignore permission errors
+  }
+  
+  return null;
+}
+
+// Verify server.js exists (search recursively if needed)
+const expectedServerFile = path.join(process.cwd(), '.next', 'standalone', 'server.js');
+const standaloneDir = path.join(process.cwd(), '.next', 'standalone');
+
+let serverFile = null;
+if (fs.existsSync(expectedServerFile)) {
+  serverFile = expectedServerFile;
+  console.log('✓ Standalone server.js exists at expected location');
 } else {
-  console.error('❌ ERROR: server.js not found in standalone output!');
-  console.error('   Expected location:', serverFile);
-  process.exit(1);
+  // Search for server.js in nested directories
+  console.log('Searching for server.js in standalone directory...');
+  serverFile = findServerFile(standaloneDir);
+  
+  if (serverFile) {
+    console.log('✓ Standalone server.js found at:', serverFile);
+    // Copy server.js to expected location for compatibility with start scripts
+    if (serverFile !== expectedServerFile) {
+      try {
+        fs.copyFileSync(serverFile, expectedServerFile);
+        console.log('✓ Copied server.js to expected location for compatibility');
+      } catch (error) {
+        console.warn('⚠ WARNING: Failed to copy server.js to expected location:', error.message);
+        console.warn('  Your start script may need to be updated to use:', serverFile);
+      }
+    }
+  } else {
+    console.error('❌ ERROR: server.js not found in standalone output!');
+    console.error('   Expected location:', expectedServerFile);
+    console.error('   Searched in:', standaloneDir);
+    process.exit(1);
+  }
 }
 
 console.log('\n✓ Build verification complete');
