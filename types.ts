@@ -7,7 +7,7 @@ export interface SignUpResponse {
     hasProAccess?: boolean; // Whether user is eligible for 1 year of Wingman Pro (based on position and signup deadline)
     isApproved?: boolean; // Whether user has been approved for early access
 }
-  
+
 export interface FormState {
     email: string;
     message: string;
@@ -67,7 +67,7 @@ export interface ReplyResponse {
 }
 
 // Attachment can be a URL string or an object with url property
-export type Attachment = string | { url: string; [key: string]: any };
+export type Attachment = string | { url: string;[key: string]: any };
 
 export interface ForumPost {
     author: string;
@@ -80,6 +80,7 @@ export interface ForumPost {
     edited?: boolean; // Whether the post has been edited
     editedAt?: string | null; // Timestamp of the last edit (or null if never edited)
     gameTitle?: string | null; // Game title for unified feed
+    categoryDisplayName?: string | null; // Formatted category name (e.g., "Need Tips / Advice")
     forumTitle?: string | null; // Forum title for unified feed
     forumId?: string | null; // Forum ID for unified feed
     parentPostId?: string | null; // For replies - ID of parent post

@@ -454,12 +454,14 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                 const safePosts = (cachedData.posts || []).map((post: any) => ({
                   ...post,
                   gameTitle: post?.gameTitle || null,
+                  categoryDisplayName: post?.categoryDisplayName || null,
                   forumTitle: post?.forumTitle || null,
                   forumId: post?.forumId || null,
                   parentPostId: post?.parentPostId || null,
                   replies: (post?.replies || []).map((reply: any) => ({
                     ...reply,
                     gameTitle: reply?.gameTitle || null,
+                    categoryDisplayName: reply?.categoryDisplayName || null,
                     forumTitle: reply?.forumTitle || null,
                     forumId: reply?.forumId || null,
                     parentPostId: reply?.parentPostId || null,
@@ -495,24 +497,59 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
               postCount: response.data.posts?.length || 0,
               firstPost: response.data.posts?.[0],
             });
+            // Log posts missing categoryDisplayName
+            const postsWithoutCategory = (response.data.posts || []).filter(
+              (post: any) => !post?.categoryDisplayName && post?.gameTitle
+            );
+            if (postsWithoutCategory.length > 0) {
+              console.log("Posts without categoryDisplayName:", postsWithoutCategory.map((p: any) => ({
+                gameTitle: p?.gameTitle,
+                categoryDisplayName: p?.categoryDisplayName,
+                forumTitle: p?.forumTitle,
+                category: p?.category,
+                allKeys: Object.keys(p || {})
+              })));
+            }
           }
 
           setForumData(response.data);
           // Ensure posts is always an array and each post has required fields
-          const safePosts = (response.data.posts || []).map((post: any) => ({
-            ...post,
-            gameTitle: post?.gameTitle || null,
-            forumTitle: post?.forumTitle || null,
-            forumId: post?.forumId || null,
-            parentPostId: post?.parentPostId || null,
-            replies: (post?.replies || []).map((reply: any) => ({
-              ...reply,
-              gameTitle: reply?.gameTitle || null,
-              forumTitle: reply?.forumTitle || null,
-              forumId: reply?.forumId || null,
-              parentPostId: reply?.parentPostId || null,
-            })),
-          }));
+          const safePosts = (response.data.posts || []).map((post: any) => {
+            // Preserve categoryDisplayName if it exists, even if it's an empty string
+            // Also check for alternative field names
+            const categoryDisplayName = 
+              post?.categoryDisplayName !== undefined && post?.categoryDisplayName !== null
+                ? String(post.categoryDisplayName).trim() || null
+                : post?.category !== undefined && post?.category !== null
+                ? String(post.category).trim() || null
+                : null;
+            
+            return {
+              ...post,
+              gameTitle: post?.gameTitle || null,
+              categoryDisplayName: categoryDisplayName,
+              forumTitle: post?.forumTitle || null,
+              forumId: post?.forumId || null,
+              parentPostId: post?.parentPostId || null,
+              replies: (post?.replies || []).map((reply: any) => {
+                const replyCategoryDisplayName = 
+                  reply?.categoryDisplayName !== undefined && reply?.categoryDisplayName !== null
+                    ? String(reply.categoryDisplayName).trim() || null
+                    : reply?.category !== undefined && reply?.category !== null
+                    ? String(reply.category).trim() || null
+                    : null;
+                
+                return {
+                  ...reply,
+                  gameTitle: reply?.gameTitle || null,
+                  categoryDisplayName: replyCategoryDisplayName,
+                  forumTitle: reply?.forumTitle || null,
+                  forumId: reply?.forumId || null,
+                  parentPostId: reply?.parentPostId || null,
+                };
+              }),
+            };
+          });
           setPosts(safePosts);
           setOffset(safePosts.length);
         } else {
@@ -548,12 +585,14 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                 const safePosts = (cachedData.posts || []).map((post: any) => ({
                   ...post,
                   gameTitle: post?.gameTitle || null,
+                  categoryDisplayName: post?.categoryDisplayName || null,
                   forumTitle: post?.forumTitle || null,
                   forumId: post?.forumId || null,
                   parentPostId: post?.parentPostId || null,
                   replies: (post?.replies || []).map((reply: any) => ({
                     ...reply,
                     gameTitle: reply?.gameTitle || null,
+                    categoryDisplayName: reply?.categoryDisplayName || null,
                     forumTitle: reply?.forumTitle || null,
                     forumId: reply?.forumId || null,
                     parentPostId: reply?.parentPostId || null,
@@ -621,12 +660,14 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
         const newPosts = (response.data.posts || []).map((post: any) => ({
           ...post,
           gameTitle: post?.gameTitle || null,
+          categoryDisplayName: post?.categoryDisplayName || null,
           forumTitle: post?.forumTitle || null,
           forumId: post?.forumId || null,
           parentPostId: post?.parentPostId || null,
           replies: (post?.replies || []).map((reply: any) => ({
             ...reply,
             gameTitle: reply?.gameTitle || null,
+            categoryDisplayName: reply?.categoryDisplayName || null,
             forumTitle: reply?.forumTitle || null,
             forumId: reply?.forumId || null,
             parentPostId: reply?.parentPostId || null,
@@ -1641,12 +1682,38 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                     ? post.gameTitle
                     : null
                   : null;
+              // Try categoryDisplayName first, fallback to forumTitle if not available
+              const categoryDisplayName =
+                post && typeof post === "object" && "categoryDisplayName" in post
+                  ? typeof post.categoryDisplayName === "string" && post.categoryDisplayName.trim()
+                    ? post.categoryDisplayName.trim()
+                    : null
+                  : null;
               const forumTitle =
                 post && typeof post === "object" && "forumTitle" in post
                   ? typeof post.forumTitle === "string"
                     ? post.forumTitle
                     : null
                   : null;
+              
+              // Clean category name by removing redundant game title prefix
+              const cleanCategoryName = (category: string | null, game: string | null): string | null => {
+                if (!category || !game) return category;
+                
+                // Remove game title prefix if it exists (handles "Game Title - Category" or "Game Title -Category")
+                const prefixPattern = new RegExp(`^${game.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*-\\s*`, 'i');
+                const cleaned = category.replace(prefixPattern, '').trim();
+                
+                // Return cleaned category if it's different, otherwise return original
+                return cleaned && cleaned !== category ? cleaned : category;
+              };
+              
+              // Fallback: use forumTitle if categoryDisplayName is not available
+              const categoryName = cleanCategoryName(
+                categoryDisplayName || 
+                (forumTitle && typeof forumTitle === "string" && forumTitle.trim() ? forumTitle.trim() : null),
+                gameTitle
+              );
               const forumId =
                 post && typeof post === "object" && "forumId" in post
                   ? typeof post.forumId === "string"
@@ -1683,7 +1750,9 @@ const ForumPreview: React.FC<ForumPreviewProps> = ({
                         fontWeight: 600,
                       }}
                     >
-                      {gameTitle}
+                      {categoryName
+                        ? `${gameTitle} (${categoryName})`
+                        : gameTitle}
                     </div>
                   )}
                   <div className="post-header">
